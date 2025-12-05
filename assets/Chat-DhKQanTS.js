@@ -1,0 +1,1 @@
+import{u as n,r as t,w as r,o as c,c as l}from"./index-Dz5INiKS.js";import{C as u}from"./ChatBox-CUnam6xf.js";const m={__name:"Chat",setup(d){const e=n(),s=t(null);return s.value=e.params.sessionId,r(()=>e.params.sessionId,(o,a)=>{console.log("SessionId changed:",o),s.value=o}),(o,a)=>(c(),l(u,{sessionId:s.value},null,8,["sessionId"]))}};export{m as default};
