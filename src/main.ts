@@ -2,7 +2,7 @@ import { createApp } from 'vue'
 import 'element-plus/dist/index.css'
 
 import './scss/reset.css'
-import './scss/style.css'
+
 
 import App from './App.vue'
 import router from './router/index'

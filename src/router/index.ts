@@ -10,7 +10,12 @@ const routes: Array<RouteRecordRaw> = [
       requiresFrontEndAuth: true
     },
   },
-  { path: "/chat/:sessionId", component: () => import('../views/Chat.vue'), }
+  { path: "/chat/:sessionId", component: () => import('../views/Chat.vue'), },
+  {
+    path: '/Home2',
+    name: 'Home2',
+    component: () => import('../views/Home2.vue'),
+  },
 
 ]
 

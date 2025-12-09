@@ -30,6 +30,7 @@ export default defineConfig({
     }),
   ],
   server: {
+    host: true,
     // port: 8080, // 使用的端口号
     // open: true, // 是否自动打开浏览器
     // watch: {

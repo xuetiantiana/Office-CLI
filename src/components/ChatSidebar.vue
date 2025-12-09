@@ -1,40 +1,43 @@
 <template>
   <div class="sidebar-content">
 
-    <button @click="create">+ New Chat</button>
-
+    <el-button @click="create">+ New Chat</el-button>
+    <p class="chat-list-h2">Chat List</p>
     <div
-      v-for="s in sessions"
-      :key="s.id"
+      v-for="(s,index) in reversedSessions"
+      :key="index"
       class="item"
-      @click="go(s.id)"
+      @click="go(s.session_id)"
     >
-      {{ s.title || "New Chat" }}
+      {{ s.title || "Chat "+ (index+1)}}
     </div>
 
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue"
+import { ref, onMounted, computed } from "vue"
 import { useRouter } from "vue-router"
 
 const router = useRouter()
 const sessions = ref([])
 
+const reversedSessions = computed(() => sessions.value.slice().reverse());
+
 function load() {
-  sessions.value = JSON.parse(localStorage.getItem("sessions") || "[]")
+  sessions.value = JSON.parse(localStorage.getItem("session_id_chat_history_list") || "[]")
 }
 
 function save() {
-  localStorage.setItem("sessions", JSON.stringify(sessions.value))
+  localStorage.setItem("session_id_chat_history_list", JSON.stringify(sessions.value))
 }
 
 function create() {
-  const id = crypto.randomUUID()
-  sessions.value.push({ id, title: "New Chat" })
-  save()
-  router.push(`/chat/${id}`)
+  // const id = crypto.randomUUID()
+  // sessions.value.push({ "session_id": id, title: "New Chat" })
+  // save()
+  // router.push(`/chat/${id}`)
+  router.push("./")
 }
 
 function go(id) {
@@ -44,18 +47,28 @@ function go(id) {
 onMounted(load)
 </script>
 
-<style scoped>
+<style lang="scss" scoped>
 .sidebar-content {
   padding: 10px;
-  height: 100%;
+  height: 100vh;
   overflow-y: auto;
-}
-.item {
-  padding: 8px;
+  box-sizing: border-box;
+  font-size: 1rem;
+  color: #000;
+  .chat-list-h2{
+    margin-top: .2em;
+    font-size: 1.1em;
+    padding: .4em .8em;
+    opacity: .9;
+  }
+  .item {
+  padding: .4em 1em;
   cursor: pointer;
   border-radius: 6px;
 }
 .item:hover {
   background: #f0f0f0;
 }
+}
+
 </style>

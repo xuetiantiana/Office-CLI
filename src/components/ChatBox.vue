@@ -1,191 +1,186 @@
 <template>
-  <div :class="['light-theme', 'demo-page']" id="app">
-    <!-- Demo Execution Page -->
-    <div id="demoPage">
-      <div class="app-container">
-        <!-- Left: Chat Panel -->
-        <div class="chat-panel">
-          <div class="chat-header">
-            <div class="header-left">
-              <h1 class="app-title">Office CLI</h1>
-            </div>
-          </div>
-          <!-- chat message list -->
-          <div class="chat-messages" id="chatMessages" ref="scrollbarRef">
-            <div
-              v-for="(msg, idx) in chatHistory"
-              :key="idx"
-              class="conversation-item"
-            >
-              <div v-if="msg.role === 'user'" class="conv-header">
-                <div class="conv-avatar user">U</div>
-                <span class="conv-role">User</span>
-              </div>
-              <div
-                v-if="
-                  msg.role === 'model' &&
-                  idx > 0 &&
-                  chatHistory[idx - 1].role != 'model'
-                "
-                class="conv-header assistant-header"
-                style="margin-bottom: 12px"
-              >
-                <img
-                  src="@/assets/OfficeCLI.jpg"
-                  alt="Office CLI"
-                  style="
-                    width: 32px;
-                    height: 32px;
-                    border-radius: 50%;
-                    object-fit: cover;
-                  "
-                />
-                <span
-                  class="conv-role"
-                  style="font-size: 15px; font-weight: 700; color: #0078d4"
-                  >Office CLI for Word</span
-                >
-              </div>
-              <div
-                class="conv-content"
-                :class="msg.role == 'user' ? 'user-content' : ''"
-              >
-                <template v-if="msg.role === 'user'">
-                  <div v-text="msg.text" style="white-space: pre-line"></div>
-                </template>
-
-                <template v-else>
-                  <div
-                    style="margin-bottom: 8px; white-space: pre-line"
-                    v-text="msg.text"
-                  ></div>
-                </template>
-                <template
-                  v-if="
-                    msg.data &&
-                    msg.data.actions &&
-                    msg.data &&
-                    msg.data.actions.length > 0
-                  "
-                >
-                  <div
-                    v-for="(action, index) in msg.data && msg.data.actions"
-                    :key="index"
-                    class="tool-call"
-                    style="opacity: 1"
-                  >
-                    <div class="tool-call-header">
-                      <span class="tool-icon">{{ mapIcon(action.icon) }}</span
-                      ><span class="tool-name">{{ action.title }}</span
-                      ><span class="tool-goal">{{ action.description }}</span
-                      ><span class="tool-chevron">›</span>
-                    </div>
-                    <div
-                      v-if="
-                        action.previewType === 'code' && action.previewContent
-                      "
-                      class="action-code-collapsible"
-                    >
-                      <div
-                        class="action-code-header"
-                        @click="toggleCodeBlock(idx, index)"
-                      >
-                        <i class="fas fa-play-circle"></i>
-                        <span>Execute Code</span>
-                        <i
-                          :class="[
-                            'fas',
-                            'collapse-icon',
-                            expandedCodeBlocks[`${idx}-${index}`]
-                              ? 'fa-chevron-down'
-                              : 'fa-chevron-right',
-                          ]"
-                        ></i>
-                      </div>
-                      <div
-                        v-show="expandedCodeBlocks[`${idx}-${index}`]"
-                        class="action-code-content"
-                      >
-                        <pre><code v-html="highlightJavaScript(action.previewContent)"></code></pre>
-                      </div>
-                    </div>
-                  </div>
-                </template>
-              </div>
-            </div>
-          </div>
-          <!-- chat input -->
-          <div class="chat-input-container" style="position: relative">
-            <ul v-if="chatHistory.length == 0" class="example-ul" style="">
-              <li
-                v-for="item in scratchItems"
-                :key="item.query"
-                :data-query="item.query"
-                @click="sendExample(item)"
-              >
-                <span class="query-text">{{ item.text }}</span>
-              </li>
-            </ul>
-            <div class="input-wrapper">
-              <textarea
-                v-model="textareaValue"
-                id="userInput"
-                class="chat-input"
-                :placeholder="
-                  chatHistory.length == 0
-                    ? 'You can choose one of the examples above or enter your own requirements.'
-                    : 'Enter your own requirements'
-                "
-                rows="1"
-                @keydown.enter.exact.prevent="sendMessage"
-                @keydown.shift.enter
-              ></textarea>
-              <button
-                class="send-btn"
-                id="sendBtn"
-                @click="sendMessage"
-                :disabled="chatLoading || textareaValue.trim().length == 0"
-              >
-                <i v-if="!chatLoading" class="fas fa-paper-plane"></i>
-                <i v-else class="fas fa-spinner fa-spin"></i>
-              </button>
-            </div>
-          </div>
+  <div class="chat-section-container app-container">
+    <!-- Left: Chat Panel -->
+    <div class="chat-panel">
+      <div class="chat-header">
+        <div class="header-left">
+          <h1 class="app-title">Office CLI</h1>
         </div>
-        <!-- Right: Preview/Detail Panel -->
-        <div class="preview-panel">
-          <div class="preview-header">
-            <div class="preview-title-section">
-              <h2 class="preview-title" id="previewTitle">
-                Document Preview
-              </h2>
-              <span class="preview-subtitle" id="previewSubtitle">Waiting for generation...</span>
-            </div>
+      </div>
+      <!-- chat message list -->
+      <div class="chat-messages" id="chatMessages" ref="scrollbarRef">
+        <div
+          v-for="(msg, idx) in chatHistory"
+          :key="idx"
+          class="conversation-item"
+        >
+          <div v-if="msg.role === 'user'" class="conv-header">
+            <div class="conv-avatar user">U</div>
+            <span class="conv-role">User</span>
           </div>
-          <div class="preview-content" id="previewContent">
-            <div
-              v-if="true"
+          <div
+            v-if="
+              msg.role === 'model' &&
+              idx > 0 &&
+              chatHistory[idx - 1].role != 'model'
+            "
+            class="conv-header assistant-header"
+            style="margin-bottom: 12px"
+          >
+            <img
+              src="@/assets/OfficeCLI.jpg"
+              alt="Office CLI"
               style="
-                width: 100%;
-                height: 100%;
-                display: flex;
-                flex-direction: column;
+                width: 32px;
+                height: 32px;
+                border-radius: 50%;
+                object-fit: cover;
+              "
+            />
+            <span
+              class="conv-role"
+              style="font-size: 15px; font-weight: 700; color: #0078d4"
+              >Office CLI for Word</span
+            >
+          </div>
+          <div
+            class="conv-content"
+            :class="msg.role == 'user' ? 'user-content' : ''"
+          >
+            <template v-if="msg.role === 'user'">
+              <div v-text="msg.text" style="white-space: pre-line"></div>
+            </template>
+
+            <template v-else>
+              <div
+                style="margin-bottom: 8px; white-space: pre-line"
+                v-text="msg.text"
+              ></div>
+            </template>
+            <template
+              v-if="
+                msg.data &&
+                msg.data.actions &&
+                msg.data &&
+                msg.data.actions.length > 0
               "
             >
               <div
-                style="
-                  padding: 10px;
-                  background: #f8f9fa;
-                  border-bottom: 1px solid #e0e0e0;
-                  display: flex;
-                  justify-content: space-between;
-                  align-items: center;
-                "
+                v-for="(action, index) in msg.data && msg.data.actions"
+                :key="index"
+                class="tool-call"
+                style="opacity: 1"
               >
-                <span style="font-weight: 600; color: #0078d4"
-                  >Microsoft Word Document</span
+                <div class="tool-call-header">
+                  <span class="tool-icon">{{ mapIcon(action.icon) }}</span
+                  ><span class="tool-name">{{ action.title }}</span
+                  ><span class="tool-goal">{{ action.description }}</span
+                  ><span class="tool-chevron">›</span>
+                </div>
+                <div
+                  v-if="action.previewType === 'code' && action.previewContent"
+                  class="action-code-collapsible"
                 >
-                <!-- <a
+                  <div
+                    class="action-code-header"
+                    @click="toggleCodeBlock(idx, index)"
+                  >
+                    <i class="fas fa-play-circle"></i>
+                    <span>Execute Code</span>
+                    <i
+                      :class="[
+                        'fas',
+                        'collapse-icon',
+                        expandedCodeBlocks[`${idx}-${index}`]
+                          ? 'fa-chevron-down'
+                          : 'fa-chevron-right',
+                      ]"
+                    ></i>
+                  </div>
+                  <div
+                    v-show="expandedCodeBlocks[`${idx}-${index}`]"
+                    class="action-code-content"
+                  >
+                    <pre><code v-html="highlightJavaScript(action.previewContent)"></code></pre>
+                  </div>
+                </div>
+              </div>
+            </template>
+          </div>
+        </div>
+      </div>
+      <!-- chat input -->
+      <div class="chat-input-container" style="position: relative">
+        <ul v-if="chatHistory.length == 0" class="example-ul" style="">
+          <li
+            v-for="item in scratchItems"
+            :key="item.query"
+            :data-query="item.query"
+            @click="sendExample(item)"
+          >
+            <span class="query-text">{{ item.text }}</span>
+          </li>
+        </ul>
+        <div class="input-wrapper">
+          <textarea
+            v-model="textareaValue"
+            id="userInput"
+            class="chat-input"
+            :placeholder="
+              chatHistory.length == 0
+                ? 'You can choose one of the examples above or enter your own requirements.'
+                : 'Enter your own requirements'
+            "
+            rows="1"
+            @keydown.enter.exact.prevent="sendMessage"
+            @keydown.shift.enter
+          ></textarea>
+          <button
+            class="send-btn"
+            id="sendBtn"
+            @click="!chatLoading ? sendMessage : StopBtnClick"
+            :disabled="chatLoading || textareaValue.trim().length == 0"
+          >
+            <i v-if="!chatLoading" class="fas fa-paper-plane"></i>
+            <i v-else class="fas fa-spinner fa-spin"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+    <!-- Right: Preview/Detail Panel -->
+    <div class="preview-panel">
+      <div class="preview-header">
+        <div class="preview-title-section">
+          <h2 class="preview-title" id="previewTitle">Document Preview</h2>
+          <span class="preview-subtitle" id="previewSubtitle"
+            >Waiting for generation...</span
+          >
+        </div>
+      </div>
+      <div class="preview-content" id="previewContent">
+        <div
+          v-if="true"
+          style="
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+          "
+        >
+          <div
+            style="
+              padding: 10px;
+              background: #f8f9fa;
+              border-bottom: 1px solid #e0e0e0;
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+            "
+          >
+            <!-- <span style="font-weight: 600; color: #0078d4"
+                  >Microsoft Word Document</span
+                > -->
+            <!-- <a
                   :href="documentResult.previewContent"
                   download="Document.docx"
                   style="
@@ -198,30 +193,28 @@
                   "
                   >⬇ Download Document</a
                 > -->
-              </div>
-              <!-- <iframe
+          </div>
+          <!-- <iframe
                 :src="`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(
                   documentResult.previewContent
                 )}`"
                 style="width: 100%; flex: 1; border: none; background: #fff"
               ></iframe> -->
-              <embed src="http://20.1.170.90:2233/files/test.pdf" type="" style="height: 100%;">
-            </div>
+          <embed
+            v-if="chatHistory.length > 1"
+            src="http://20.1.170.90:2233/files/test.pdf"
+            type=""
+            style="height: 100%"
+          />
+        </div>
 
-            <div v-else-if="chatLoading" class="empty-state">
-              <i class="fas fa-file-word empty-icon"></i>
-              <p class="empty-text">Generating your document...</p>
-              <p class="empty-hint">
-                Please wait while we process your request
-              </p>
-            </div>
-
-          </div>
+        <div v-else-if="chatLoading" class="empty-state">
+          <i class="fas fa-file-word empty-icon"></i>
+          <p class="empty-text">Generating your document...</p>
+          <p class="empty-hint">Please wait while we process your request</p>
         </div>
       </div>
     </div>
-    <!-- Toast notification container -->
-    <div class="toast-container" id="toastContainer"></div>
   </div>
 </template>
 
@@ -233,6 +226,7 @@ import { onMounted } from "vue";
 import { escapeHtml, mapIcon, highlightJavaScript } from "@/utils/common.js";
 import axios from "axios";
 import { chatStream } from "@/utils/chatManger.js";
+import { ChatStop } from "@/service/api.ts";
 const props = defineProps({
   sessionId: String,
 });
@@ -241,7 +235,7 @@ const router = useRouter();
 const previewTitle = ref("Document Preview");
 const previewSubtitle = ref("Waiting for generation...");
 
-const seeeion_id = ref(null);
+const session_id = ref(null);
 const chatHistory = ref([]);
 
 const textareaValue = ref("");
@@ -277,14 +271,14 @@ function loadSession(sessionId) {
 }
 // 页面首次进入
 onMounted(async () => {
-  seeeion_id.value = props.sessionId;
+  session_id.value = props.sessionId;
   loadSession(props.sessionId);
 });
 // 切换 session_id
 watch(
   () => props.sessionId,
   (newId) => {
-    seeeion_id.value = newId;
+    session_id.value = newId;
     loadSession(newId);
   }
 );
@@ -360,12 +354,12 @@ const sendMessage = async () => {
 
   // ③ 调用 chatStream
 
-  if (!seeeion_id.value) {
-    seeeion_id.value = generateId();
+  if (!session_id.value) {
+    session_id.value = generateId();
   }
   await chatStream(
     {
-      session_id: seeeion_id.value,
+      session_id: session_id.value,
       messages: chatHistory.value,
     },
     {
@@ -402,7 +396,7 @@ function save() {
     localStorage.getItem("session_id_chat_history_list") || "[]"
   );
   const idx = chatHistoryList.findIndex(
-    (s) => s.session_id === seeeion_id.value
+    (s) => s.session_id === session_id.value
   );
 
   if (idx !== -1) {
@@ -415,7 +409,7 @@ function save() {
     // 首条消息放入 session
 
     chatHistoryList.push({
-      session_id: seeeion_id.value,
+      session_id: session_id.value,
       chatHistory: chatHistory.value,
     });
 
@@ -427,8 +421,17 @@ function save() {
 }
 
 function generateId() {
-  return "msg-" + Date.now() + "-" + Math.floor(Math.random() * 10000);
+  return crypto.randomUUID();
 }
+
+const StopBtnClick = () => {
+  if (session_id.value) {
+    // ChatStop({
+    //   "session_id": session_id.value,
+    //   "command": "stop"
+    // })
+  }
+};
 
 // Toggle Code Block Display
 function toggleCodeBlock(msgIdx, actionIndex) {
@@ -590,6 +593,572 @@ async function loadDemoConversation(query) {
 </script>
 
 <style scoped lang="scss">
+.app-container {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+
+  /* ==================== Left Chat Panel ==================== */
+  .chat-panel {
+    width: 40%;
+    min-width: 400px;
+    max-width: 800px;
+    display: flex;
+    flex-direction: column;
+    background-color: var(--bg-primary);
+    border-right: 1px solid var(--border-color);
+    transition: background-color var(--transition-speed);
+    .chat-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border-color);
+      background-color: var(--bg-primary);
+      .header-left {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        .app-title {
+          font-size: 1.4em;
+          font-weight: 600;
+          color: var(--text-primary);
+        }
+      }
+    }
+
+    /* ==================== Message Area ==================== */
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+  }
+
+  /* Conversation Item Styles (for demo page) */
+  .conversation-item {
+    margin-bottom: 16px;
+    animation: fadeIn 0.3s ease-in;
+    .conv-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .conv-avatar {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.9em;
+      font-weight: 600;
+    }
+
+    .conv-avatar.user {
+      background: #0078d4;
+      color: #fff;
+    }
+
+    .conv-avatar.assistant {
+      background: #7e3ff2;
+      color: #fff;
+    }
+
+    .conv-role {
+      font-size: 1em;
+      font-weight: 600;
+      color: #333;
+    }
+
+    .conv-content {
+      background: transparent;
+      padding: 0;
+      border: none;
+      line-height: 1.6;
+      font-size: 1em;
+      margin-left: 0;
+    }
+
+    .conv-content.user-content {
+      background: #f8f9fa;
+      padding: 12px;
+      border-radius: 6px;
+      border: 1px solid #e0e0e0;
+      margin-left: 32px;
+    }
+
+    .conv-content pre {
+      background: #fff;
+      padding: 12px;
+      border-radius: 4px;
+      overflow-x: auto;
+      margin: 8px 0;
+      font-size: 0.9em;
+      font-family: "Consolas", "Monaco", "Courier New", monospace;
+      border: 1px solid #e0e0e0;
+    }
+
+    .conv-content code {
+      background: #fff;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: "Consolas", "Monaco", "Courier New", monospace;
+      font-size: 0.9em;
+      color: #d63384;
+      border: 1px solid #f0e5ea;
+    }
+  }
+
+  /* Tool Call Styles (matching replay.html) */
+  .tool-call {
+    background: transparent;
+    border: none;
+    border-left: 3px solid #ff9800;
+    padding: 8px 12px;
+    padding-left: 12px;
+    border-radius: 4px;
+    margin: 6px 0;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: block;
+    font-size: 1em;
+    &:hover {
+      background: #fff8f0;
+      border-left-color: #f57c00;
+    }
+
+    &.active {
+      background: #fff3e0;
+      border-left-width: 4px;
+      font-weight: 500;
+    }
+
+    .tool-call-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .tool-icon {
+      font-size: 1em;
+      flex-shrink: 0;
+    }
+
+    .tool-name {
+      font-weight: 600;
+      color: #e65100;
+      font-size: 1em;
+    }
+
+    .tool-goal {
+      font-size: 0.9em;
+      color: #666;
+      font-style: italic;
+      flex: 1;
+    }
+
+    .tool-chevron {
+      color: #999;
+      font-size: 11px;
+      transition: transform 0.2s;
+      margin-left: auto;
+    }
+
+    &:hover .tool-chevron {
+      transform: translateX(2px);
+    }
+  }
+
+  /* Loading Animation */
+  .typing-indicator {
+    display: flex;
+    gap: 4px;
+    padding: 12px 16px;
+  }
+
+  .typing-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: var(--text-tertiary);
+    animation: typing 1.4s infinite;
+  }
+
+  .typing-dot:nth-child(2) {
+    animation-delay: 0.2s;
+  }
+
+  .typing-dot:nth-child(3) {
+    animation-delay: 0.4s;
+  }
+
+  @keyframes typing {
+    0%,
+    60%,
+    100% {
+      transform: translateY(0);
+      opacity: 0.7;
+    }
+    30% {
+      transform: translateY(-10px);
+      opacity: 1;
+    }
+  }
+
+  /* ==================== Input Area ==================== */
+  .chat-input-container {
+    padding: 16px 24px 24px;
+    border-top: 1px solid var(--border-color);
+    background-color: var(--bg-primary);
+
+    .input-wrapper {
+      display: flex;
+      gap: 12px;
+      align-items: flex-end;
+      margin-bottom: 12px;
+    }
+
+    .chat-input {
+      flex: 1;
+      min-height: 44px;
+      max-height: 120px;
+      padding: 12px 16px;
+      border: 1px solid var(--border-color);
+      border-radius: 3px;
+      font-size: 1em;
+      font-family: var(--font-family);
+      background-color: #fff;
+      color: var(--text-primary);
+      resize: none;
+      transition: all var(--transition-speed);
+    }
+
+    .chat-input:focus {
+      outline: none;
+      border-color: var(--primary-color);
+      background-color: #fff;
+    }
+
+    .chat-input:disabled {
+      cursor: not-allowed;
+      opacity: 0.6;
+      background-color: var(--bg-secondary);
+      color: var(--text-tertiary);
+    }
+
+    .send-btn {
+      width: 44px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: var(--primary-color);
+      border: 1px solid var(--primary-color);
+      border-radius: 3px;
+      color: white;
+      font-size: 1.1em;
+      cursor: pointer;
+      transition: all var(--transition-speed);
+      flex-shrink: 0;
+    }
+
+    .send-btn:hover {
+      background-color: var(--primary-hover);
+      border-color: var(--primary-hover);
+    }
+
+    .send-btn:disabled {
+      cursor: not-allowed;
+      opacity: 0.5;
+      background-color: var(--text-tertiary);
+      border-color: var(--text-tertiary);
+    }
+
+    .send-btn:disabled:hover {
+      background-color: var(--text-tertiary);
+      border-color: var(--text-tertiary);
+    }
+
+    .send-btn:active {
+      transform: none;
+    }
+  }
+
+  /* ==================== Right Preview Panel ==================== */
+  .preview-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background-color: var(--bg-secondary);
+
+    .preview-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      background-color: var(--bg-primary);
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .preview-title-section {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .preview-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .preview-subtitle {
+      font-size: 0.9em;
+      color: var(--text-secondary);
+    }
+
+    .preview-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .preview-content {
+      flex: 1;
+      overflow: auto;
+      padding: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Empty State */
+    .empty-state {
+      text-align: center;
+      color: var(--text-tertiary);
+    }
+
+    .empty-icon {
+      font-size: 64px;
+      margin-bottom: 16px;
+      opacity: 0.5;
+    }
+
+    .empty-text {
+      font-size: 1.2em;
+      font-weight: 500;
+      margin-bottom: 8px;
+      color: var(--text-secondary);
+    }
+
+    .empty-hint {
+      font-size: 1em;
+    }
+
+    /* Document Container */
+    .document-container {
+      width: 100%;
+      max-width: 900px;
+      background-color: var(--bg-primary);
+      border-radius: var(--border-radius);
+      border: 1px solid var(--border-color);
+      padding: 60px 80px;
+      margin: 0 auto;
+      animation: fadeIn 0.5s ease-out;
+    }
+
+    .document-title {
+      font-size: 2em;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 8px;
+      text-align: center;
+    }
+
+    .document-meta {
+      text-align: center;
+      color: var(--text-secondary);
+      font-size: 1em;
+      margin-bottom: 32px;
+      padding-bottom: 24px;
+      border-bottom: 2px solid var(--border-color);
+    }
+
+    .document-body {
+      font-size: 1.1em;
+      line-height: 1.8;
+      color: var(--text-primary);
+    }
+
+    .document-body h2 {
+      font-size: 2em;
+      font-weight: 600;
+      margin: 32px 0 16px 0;
+      color: var(--text-primary);
+    }
+
+    .document-body h3 {
+      font-size: 20px;
+      font-weight: 600;
+      margin: 24px 0 12px 0;
+      color: var(--text-primary);
+    }
+
+    .document-body p {
+      margin-bottom: 16px;
+    }
+
+    .document-body ul,
+    .document-body ol {
+      margin: 16px 0;
+      padding-left: 32px;
+    }
+
+    .document-body li {
+      margin-bottom: 8px;
+    }
+
+    .document-body strong {
+      font-weight: 600;
+      color: var(--primary-color);
+    }
+  }
+
+  /* ==================== Animations ==================== */
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes slideInRight {
+    from {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+
+  /* ==================== Responsive Design ==================== */
+  @media (max-width: 1024px) {
+    .chat-panel {
+      width: 50%;
+      min-width: 350px;
+    }
+
+    .document-container {
+      padding: 40px 50px;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .app-container {
+      flex-direction: column;
+    }
+
+    .chat-panel {
+      width: 100%;
+      min-width: auto;
+      max-width: none;
+      height: 50vh;
+      border-right: none;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .preview-panel {
+      height: 50vh;
+    }
+
+    .document-container {
+      padding: 32px 24px;
+    }
+
+    .message-content {
+      max-width: 85%;
+    }
+
+    .toast-container {
+      right: 16px;
+      left: 16px;
+    }
+
+    .toast {
+      min-width: auto;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .chat-header {
+      padding: 16px;
+    }
+
+    .app-title {
+      font-size: 1.2em;
+    }
+
+    .chat-messages {
+      padding: 16px;
+    }
+
+    .chat-input-container {
+      padding: 12px 16px 16px;
+    }
+
+    .document-container {
+      padding: 24px 16px;
+    }
+
+    .document-title {
+      font-size: 24px;
+    }
+
+    .document-body {
+      font-size: 15px;
+    }
+  }
+
+  .example-ul {
+    background: #fff;
+    padding: 0;
+    margin: 0;
+    z-index: 3;
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 80px;
+    padding: 10px 24px;
+    li {
+      padding: 10px 14px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border: 1px solid #e0e0e0;
+      margin: 5px 0;
+
+      &:hover {
+        border-left-color: var(--primary-color);
+        border-left: 3px solid var(--primary-color);
+        transform: translateX(2px);
+        background: #f0f0f0;
+      }
+    }
+  }
+}
 .example-ul {
   background: #fff;
   padding: 0;
@@ -614,6 +1183,111 @@ async function loadDemoConversation(query) {
       transform: translateX(2px);
       background: #f0f0f0;
     }
+  }
+}
+</style>
+
+
+
+<style lang="scss">
+/* Collapsible Code Block */
+.action-code-collapsible {
+  margin-top: 12px;
+  border-top: 1px solid var(--border-color);
+  padding-top: 8px;
+
+  .action-code-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    background: var(--bg-tertiary);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all var(--transition-speed);
+    user-select: none;
+  }
+
+  .action-code-header:hover {
+    background: var(--bg-primary);
+  }
+
+  .action-code-header i.fa-play-circle {
+    color: var(--success-color);
+    font-size: 1em;
+  }
+
+  .action-code-header span {
+    flex: 1;
+    font-size: 1em;
+    font-weight: 500;
+    color: var(--text-primary);
+  }
+
+  .action-code-header .collapse-icon {
+    font-size: 0.9em;
+    color: var(--text-tertiary);
+    transition: transform var(--transition-speed);
+  }
+
+  .action-code-content {
+    margin-top: 8px;
+    background: #fff;
+    border-radius: 4px;
+    overflow: hidden;
+    height: 300px;
+    overflow-y: auto;
+    border: 1px solid var(--border-color);
+  }
+
+  .action-code-content pre {
+    margin: 0;
+    padding: 12px;
+    font-family: Consolas, Monaco, "Courier New", monospace;
+    font-size: 0.9em;
+    line-height: 1.6;
+    color: var(--text-primary);
+    white-space: pre-wrap;
+    word-wrap: break-word;
+  }
+
+  .action-code-content code {
+    font-family: inherit;
+  }
+
+  /* JavaScript Syntax Highlighting */
+  .action-code-content .keyword {
+    color: #569cd6;
+    font-weight: 500;
+  }
+
+  .action-code-content .string {
+    color: #ce9178;
+  }
+
+  .action-code-content .comment {
+    color: #6a9955;
+    font-style: italic;
+  }
+
+  .action-code-content .function {
+    color: #dcdcaa;
+  }
+
+  .action-code-content .number {
+    color: #b5cea8;
+  }
+
+  .action-code-content .property {
+    color: #9cdcfe;
+  }
+
+  .action-code-content .operator {
+    color: #d4d4d4;
+  }
+
+  .action-code-content .punctuation {
+    color: #d4d4d4;
   }
 }
 </style>

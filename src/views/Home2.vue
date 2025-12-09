@@ -1,8 +1,5 @@
 <template>
-  <div
-    :class="['light-theme', 'demo-page']"
-    id="app"
-  >
+  <div :class="['light-theme', 'demo-page']" id="app">
     <!-- Demo Execution Page -->
     <div id="demoPage">
       <div class="app-container">
@@ -191,7 +188,7 @@
                     color: white;
                     text-decoration: none;
                     border-radius: 4px;
-                    font-size: 12px;
+                    font-size: .9em;
                   "
                   >⬇ Download Document</a
                 >
@@ -289,7 +286,6 @@ const editItems = [
   { query: "add-toc", text: '"Add table of contents"' },
 ];
 
-
 const previewTitle = ref("Document Preview");
 const previewSubtitle = ref("Waiting for generation...");
 
@@ -300,7 +296,6 @@ const textareaValue = ref("");
 const chatLoading = ref(false);
 
 const scrollbarRef = ref(null);
-
 
 const documentResult = ref();
 
@@ -432,7 +427,6 @@ watch(
   { deep: true }
 );
 
-
 const sendExample = (caseText) => {
   if (chatLoading.value) {
     return;
@@ -452,7 +446,7 @@ const sendMessage = () => {
   });
   // textareaValue.value = "";
 
-  chatStream(textareaValue.value.trim())
+  chatStream(textareaValue.value.trim());
 
   setTimeout(() => {
     chatLoading.value = false;
@@ -511,7 +505,7 @@ const chatStream = async (text) => {
       // --- 5. 开始读取流 ---
       const reader = res.body.getReader();
       const decoder = new TextDecoder("utf-8");
-      console.log("decoder",decoder)
+      console.log("decoder", decoder);
 
       let buffer = "";
       let finalText = ""; // 最终 AI 回复内容
@@ -522,7 +516,7 @@ const chatStream = async (text) => {
 
         // 解码 chunk（可能不完整）
         buffer += decoder.decode(value, { stream: true });
-        console.log("buffer",buffer)
+        console.log("buffer", buffer);
         // 按 SSE 标准：每条事件之间是空行
         const events = buffer.split("\n\n");
 
@@ -584,6 +578,575 @@ function toggleCodeBlock(msgIdx, actionIndex) {
 </script>
 
 <style scoped lang="scss">
+.app-container {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+
+  /* ==================== Left Chat Panel ==================== */
+  .chat-panel {
+    width: 40%;
+    min-width: 400px;
+    max-width: 800px;
+    display: flex;
+    flex-direction: column;
+    background-color: var(--bg-primary);
+    border-right: 1px solid var(--border-color);
+    transition: background-color var(--transition-speed);
+    .chat-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border-color);
+      background-color: var(--bg-primary);
+      .header-left {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        .app-title {
+          font-size: 1.4em;
+          font-weight: 600;
+          color: var(--text-primary);
+        }
+      }
+    }
+
+    /* ==================== Message Area ==================== */
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+  }
+
+  /* Conversation Item Styles (for demo page) */
+  .conversation-item {
+    margin-bottom: 16px;
+    animation: fadeIn 0.3s ease-in;
+    .conv-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .conv-avatar {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: .9em;
+      font-weight: 600;
+    }
+
+    .conv-avatar.user {
+      background: #0078d4;
+      color: #fff;
+    }
+
+    .conv-avatar.assistant {
+      background: #7e3ff2;
+      color: #fff;
+    }
+
+    .conv-role {
+      font-size: 1em;
+      font-weight: 600;
+      color: #333;
+    }
+
+    .conv-content {
+      background: transparent;
+      padding: 0;
+      border: none;
+      line-height: 1.6;
+      font-size: 1em;
+      margin-left: 0;
+    }
+
+    .conv-content.user-content {
+      background: #f8f9fa;
+      padding: 12px;
+      border-radius: 6px;
+      border: 1px solid #e0e0e0;
+      margin-left: 32px;
+    }
+
+    .conv-content pre {
+      background: #fff;
+      padding: 12px;
+      border-radius: 4px;
+      overflow-x: auto;
+      margin: 8px 0;
+      font-size: .9em;
+      font-family: "Consolas", "Monaco", "Courier New", monospace;
+      border: 1px solid #e0e0e0;
+    }
+
+    .conv-content code {
+      background: #fff;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: "Consolas", "Monaco", "Courier New", monospace;
+      font-size: .9em;
+      color: #d63384;
+      border: 1px solid #f0e5ea;
+    }
+  }
+
+  /* Tool Call Styles (matching replay.html) */
+  .tool-call {
+    background: transparent;
+    border: none;
+    border-left: 3px solid #ff9800;
+    padding: 8px 12px;
+    padding-left: 12px;
+    border-radius: 4px;
+    margin: 6px 0;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: block;
+    font-size: 1em;
+    &:hover {
+      background: #fff8f0;
+      border-left-color: #f57c00;
+    }
+
+    &.active {
+      background: #fff3e0;
+      border-left-width: 4px;
+      font-weight: 500;
+    }
+
+    .tool-call-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .tool-icon {
+      font-size: 1em;
+      flex-shrink: 0;
+    }
+
+    .tool-name {
+      font-weight: 600;
+      color: #e65100;
+      font-size: 1em;
+    }
+
+    .tool-goal {
+      font-size: .9em;
+      color: #666;
+      font-style: italic;
+      flex: 1;
+    }
+
+    .tool-chevron {
+      color: #999;
+      font-size: 11px;
+      transition: transform 0.2s;
+      margin-left: auto;
+    }
+
+    &:hover .tool-chevron {
+      transform: translateX(2px);
+    }
+  }
+
+  
+  
+
+  /* Loading Animation */
+  .typing-indicator {
+    display: flex;
+    gap: 4px;
+    padding: 12px 16px;
+  }
+
+  .typing-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: var(--text-tertiary);
+    animation: typing 1.4s infinite;
+  }
+
+  .typing-dot:nth-child(2) {
+    animation-delay: 0.2s;
+  }
+
+  .typing-dot:nth-child(3) {
+    animation-delay: 0.4s;
+  }
+
+  @keyframes typing {
+    0%,
+    60%,
+    100% {
+      transform: translateY(0);
+      opacity: 0.7;
+    }
+    30% {
+      transform: translateY(-10px);
+      opacity: 1;
+    }
+  }
+
+  /* ==================== Input Area ==================== */
+  .chat-input-container {
+    padding: 16px 24px 24px;
+    border-top: 1px solid var(--border-color);
+    background-color: var(--bg-primary);
+
+    .input-wrapper {
+      display: flex;
+      gap: 12px;
+      align-items: flex-end;
+      margin-bottom: 12px;
+    }
+
+    .chat-input {
+      flex: 1;
+      min-height: 44px;
+      max-height: 120px;
+      padding: 12px 16px;
+      border: 1px solid var(--border-color);
+      border-radius: 3px;
+      font-size: 1em;
+      font-family: var(--font-family);
+      background-color: #fff;
+      color: var(--text-primary);
+      resize: none;
+      transition: all var(--transition-speed);
+    }
+
+    .chat-input:focus {
+      outline: none;
+      border-color: var(--primary-color);
+      background-color: #fff;
+    }
+
+    .chat-input:disabled {
+      cursor: not-allowed;
+      opacity: 0.6;
+      background-color: var(--bg-secondary);
+      color: var(--text-tertiary);
+    }
+
+    .send-btn {
+      width: 44px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: var(--primary-color);
+      border: 1px solid var(--primary-color);
+      border-radius: 3px;
+      color: white;
+      font-size: 1.1em;
+      cursor: pointer;
+      transition: all var(--transition-speed);
+      flex-shrink: 0;
+    }
+
+    .send-btn:hover {
+      background-color: var(--primary-hover);
+      border-color: var(--primary-hover);
+    }
+
+    .send-btn:disabled {
+      cursor: not-allowed;
+      opacity: 0.5;
+      background-color: var(--text-tertiary);
+      border-color: var(--text-tertiary);
+    }
+
+    .send-btn:disabled:hover {
+      background-color: var(--text-tertiary);
+      border-color: var(--text-tertiary);
+    }
+
+    .send-btn:active {
+      transform: none;
+    }
+  }
+
+  /* ==================== Right Preview Panel ==================== */
+  .preview-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background-color: var(--bg-secondary);
+
+    .preview-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      background-color: var(--bg-primary);
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .preview-title-section {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .preview-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .preview-subtitle {
+      font-size: .9em;
+      color: var(--text-secondary);
+    }
+
+    .preview-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .preview-content {
+      flex: 1;
+      overflow: auto;
+      padding: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Empty State */
+    .empty-state {
+      text-align: center;
+      color: var(--text-tertiary);
+    }
+
+    .empty-icon {
+      font-size: 64px;
+      margin-bottom: 16px;
+      opacity: 0.5;
+    }
+
+    .empty-text {
+      font-size: 1.2em;
+      font-weight: 500;
+      margin-bottom: 8px;
+      color: var(--text-secondary);
+    }
+
+    .empty-hint {
+      font-size: 1em;
+    }
+
+    /* Document Container */
+    .document-container {
+      width: 100%;
+      max-width: 900px;
+      background-color: var(--bg-primary);
+      border-radius: var(--border-radius);
+      border: 1px solid var(--border-color);
+      padding: 60px 80px;
+      margin: 0 auto;
+      animation: fadeIn 0.5s ease-out;
+    }
+
+    .document-title {
+      font-size: 2em;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 8px;
+      text-align: center;
+    }
+
+    .document-meta {
+      text-align: center;
+      color: var(--text-secondary);
+      font-size: 1em;
+      margin-bottom: 32px;
+      padding-bottom: 24px;
+      border-bottom: 2px solid var(--border-color);
+    }
+
+    .document-body {
+      font-size: 1.1em;
+      line-height: 1.8;
+      color: var(--text-primary);
+    }
+
+    .document-body h2 {
+      font-size: 2em;
+      font-weight: 600;
+      margin: 32px 0 16px 0;
+      color: var(--text-primary);
+    }
+
+    .document-body h3 {
+      font-size: 20px;
+      font-weight: 600;
+      margin: 24px 0 12px 0;
+      color: var(--text-primary);
+    }
+
+    .document-body p {
+      margin-bottom: 16px;
+    }
+
+    .document-body ul,
+    .document-body ol {
+      margin: 16px 0;
+      padding-left: 32px;
+    }
+
+    .document-body li {
+      margin-bottom: 8px;
+    }
+
+    .document-body strong {
+      font-weight: 600;
+      color: var(--primary-color);
+    }
+  }
+
+  /* ==================== Animations ==================== */
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes slideInRight {
+    from {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+
+  /* ==================== Responsive Design ==================== */
+  @media (max-width: 1024px) {
+    .chat-panel {
+      width: 50%;
+      min-width: 350px;
+    }
+
+    .document-container {
+      padding: 40px 50px;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .app-container {
+      flex-direction: column;
+    }
+
+    .chat-panel {
+      width: 100%;
+      min-width: auto;
+      max-width: none;
+      height: 50vh;
+      border-right: none;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .preview-panel {
+      height: 50vh;
+    }
+
+    .document-container {
+      padding: 32px 24px;
+    }
+
+    .message-content {
+      max-width: 85%;
+    }
+
+    .toast-container {
+      right: 16px;
+      left: 16px;
+    }
+
+    .toast {
+      min-width: auto;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .chat-header {
+      padding: 16px;
+    }
+
+    .app-title {
+      font-size: 1.2em;
+    }
+
+    .chat-messages {
+      padding: 16px;
+    }
+
+    .chat-input-container {
+      padding: 12px 16px 16px;
+    }
+
+    .document-container {
+      padding: 24px 16px;
+    }
+
+    .document-title {
+      font-size: 24px;
+    }
+
+    .document-body {
+      font-size: 15px;
+    }
+  }
+
+  .example-ul {
+    background: #fff;
+    padding: 0;
+    margin: 0;
+    z-index: 3;
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 80px;
+    padding: 10px 24px;
+    li {
+      padding: 10px 14px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border: 1px solid #e0e0e0;
+      margin: 5px 0;
+
+      &:hover {
+        border-left-color: var(--primary-color);
+        border-left: 3px solid var(--primary-color);
+        transform: translateX(2px);
+        background: #f0f0f0;
+      }
+    }
+  }
+}
 .example-ul {
   background: #fff;
   padding: 0;
@@ -610,4 +1173,109 @@ function toggleCodeBlock(msgIdx, actionIndex) {
     }
   }
 }
+</style>
+
+
+
+<style lang="scss">
+  /* Collapsible Code Block */
+  .action-code-collapsible {
+    margin-top: 12px;
+    border-top: 1px solid var(--border-color);
+    padding-top: 8px;
+
+    .action-code-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px;
+      background: var(--bg-tertiary);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all var(--transition-speed);
+      user-select: none;
+    }
+
+    .action-code-header:hover {
+      background: var(--bg-primary);
+    }
+
+    .action-code-header i.fa-play-circle {
+      color: var(--success-color);
+      font-size: 1em;
+    }
+
+    .action-code-header span {
+      flex: 1;
+      font-size: 1em;
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    .action-code-header .collapse-icon {
+      font-size: .9em;
+      color: var(--text-tertiary);
+      transition: transform var(--transition-speed);
+    }
+
+    .action-code-content {
+      margin-top: 8px;
+      background: #fff;
+      border-radius: 4px;
+      overflow: hidden;
+      height: 300px;
+      overflow-y: auto;
+      border: 1px solid var(--border-color);
+    }
+
+    .action-code-content pre {
+      margin: 0;
+      padding: 12px;
+      font-family: Consolas, Monaco, "Courier New", monospace;
+      font-size: .9em;
+      line-height: 1.6;
+      color: var(--text-primary);
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+
+    .action-code-content code {
+      font-family: inherit;
+    }
+
+    /* JavaScript Syntax Highlighting */
+    .action-code-content .keyword {
+      color: #569cd6;
+      font-weight: 500;
+    }
+
+    .action-code-content .string {
+      color: #ce9178;
+    }
+
+    .action-code-content .comment {
+      color: #6a9955;
+      font-style: italic;
+    }
+
+    .action-code-content .function {
+      color: #dcdcaa;
+    }
+
+    .action-code-content .number {
+      color: #b5cea8;
+    }
+
+    .action-code-content .property {
+      color: #9cdcfe;
+    }
+
+    .action-code-content .operator {
+      color: #d4d4d4;
+    }
+
+    .action-code-content .punctuation {
+      color: #d4d4d4;
+    }
+  }
 </style>
