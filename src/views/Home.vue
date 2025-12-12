@@ -22,7 +22,7 @@ import ChatSidebar from "@/components/ChatSidebar.vue";
     flex-direction: row;
     flex-wrap: nowrap;
     .chat-sidebar{
-      width: 10em;
+      width: 12em;
     }
     .chat-box{
       flex: 1;

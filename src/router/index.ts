@@ -5,10 +5,6 @@ const routes: Array<RouteRecordRaw> = [
     path: '/',
     name: 'Home',
     component: () => import('../views/Home.vue'),
-    meta: {
-      keepAlive: true, //此页面需要缓存
-      requiresFrontEndAuth: true
-    },
   },
   { path: "/chat/:sessionId", component: () => import('../views/Chat.vue'), },
   {

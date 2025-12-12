@@ -128,22 +128,34 @@
             class="chat-input"
             :placeholder="
               chatHistory.length == 0
-                ? 'You can choose one of the examples above or enter your own requirements.'
+                ? 'You can choose an example above or enter your own.'
                 : 'Enter your own requirements'
             "
             rows="1"
             @keydown.enter.exact.prevent="sendMessage"
             @keydown.shift.enter
           ></textarea>
-          <button
-            class="send-btn"
-            id="sendBtn"
-            @click="!chatLoading ? sendMessage : StopBtnClick"
-            :disabled="chatLoading || textareaValue.trim().length == 0"
-          >
-            <i v-if="!chatLoading" class="fas fa-paper-plane"></i>
-            <i v-else class="fas fa-spinner fa-spin"></i>
-          </button>
+
+          <template v-if="!chatLoading">
+            <button
+              class="send-btn"
+              id="sendBtn"
+              @click="sendMessage"
+              :disabled="chatLoading || textareaValue.trim().length == 0"
+            >
+              <i class="fas fa-paper-plane"></i>
+            </button>
+          </template>
+          <template v-else>
+            <button
+              class="send-btn"
+              id="sendBtn"
+              @click="StopBtnClick"
+              :disabled="chatLoading"
+            >
+              <i class="fas fa-spinner fa-spin"></i>
+            </button>
+          </template>
         </div>
       </div>
     </div>
@@ -220,17 +232,20 @@
 
 <script setup>
 import { ref, reactive, nextTick, watch } from "vue";
-import { useRouter } from "vue-router";
+import { useRouter, useRoute } from "vue-router";
 
 import { onMounted } from "vue";
 import { escapeHtml, mapIcon, highlightJavaScript } from "@/utils/common.js";
 import axios from "axios";
 import { chatStream } from "@/utils/chatManger.js";
 import { ChatStop } from "@/service/api.ts";
+import { v4 as uuidv4 } from "uuid";
+
 const props = defineProps({
   sessionId: String,
 });
 const router = useRouter();
+const route = useRoute();
 
 const previewTitle = ref("Document Preview");
 const previewSubtitle = ref("Waiting for generation...");
@@ -263,6 +278,7 @@ function loadSession(sessionId) {
     if (chatHistory.value.length === 1) {
       console.log("请求接口");
       //   await callAPI(messages.value[0].content);
+      callChatStreamApi();
     }
   } else {
     alert("该session_id无历史记录");
@@ -283,56 +299,12 @@ watch(
   }
 );
 
-watch(
-  chatHistory,
-  async () => {
-    // 当 chatHistory 更新后，等待 DOM 更新（nextTick）再滚动到底部。
-    // 兼容三种情况：
-    // 1) scrollbarRef.value 是自定义滚动组件实例，含 wrapRef 与 setScrollTop 方法
-    // 2) scrollbarRef.value 是直接指向 DOM 元素（例如 div），可使用 element.scrollTop
-    // 3) scrollbarRef.value 未定义 -> 安全地跳过
-    await nextTick();
-
-    const sb = scrollbarRef.value;
-
-    if (!sb) return;
-
-    // 优先处理自定义组件：有 wrapRef 或 setScrollTop
-    const wrap = sb.wrapRef || sb.wrap || null;
-
-    if (
-      typeof sb.setScrollTop === "function" &&
-      wrap &&
-      wrap.scrollHeight != null
-    ) {
-      // 自定义组件提供了 setScrollTop，使用它（传入目标高度）
-      try {
-        sb.setScrollTop(wrap.scrollHeight);
-      } catch (e) {
-        // 回退到直接修改 DOM
-        if (wrap && typeof wrap.scrollTop !== "undefined")
-          wrap.scrollTop = wrap.scrollHeight;
-      }
-      return;
-    }
-
-    // 如果 scrollbarRef 本身就是 DOM 元素
-    const el = sb instanceof Element ? sb : wrap;
-    if (el && typeof el.scrollTop !== "undefined") {
-      // 将滚动位置设置为内容高度，确保滚到底部
-      el.scrollTop = el.scrollHeight;
-    }
-  },
-  { deep: true }
-);
-
 const sendMessage = async () => {
   if (textareaValue.value.trim().length == 0) {
     return;
   }
   const text = textareaValue.value.trim();
   textareaValue.value = "";
-  chatLoading.value = true;
 
   // ① push user 消息
   chatHistory.value.push({
@@ -341,6 +313,21 @@ const sendMessage = async () => {
     // data: { role: "user", content: text },
   });
 
+  if (route.path === "/") {
+    // 如果是在首页send，跳转到chat/:session_id页面
+    if (!session_id.value) {
+      session_id.value = generateId();
+    }
+    save();
+    router.push(`/chat/${session_id.value}`);
+  } else {
+    // 在chat页面
+    callChatStreamApi();
+  }
+};
+
+const callChatStreamApi = async () => {
+  chatLoading.value = true;
   // ② push assistant 空消息（准备流式填充）
   const assistantMsg = reactive({
     role: "model",
@@ -421,17 +408,61 @@ function save() {
 }
 
 function generateId() {
-  return crypto.randomUUID();
+  // return crypto.randomUUID();
+  return uuidv4();
 }
 
 const StopBtnClick = () => {
   if (session_id.value) {
-    // ChatStop({
-    //   "session_id": session_id.value,
-    //   "command": "stop"
-    // })
+    ChatStop({
+      "session_id": session_id.value,
+      "command": "stop"
+    })
   }
 };
+
+watch(
+  chatHistory,
+  async () => {
+    // 当 chatHistory 更新后，等待 DOM 更新（nextTick）再滚动到底部。
+    // 兼容三种情况：
+    // 1) scrollbarRef.value 是自定义滚动组件实例，含 wrapRef 与 setScrollTop 方法
+    // 2) scrollbarRef.value 是直接指向 DOM 元素（例如 div），可使用 element.scrollTop
+    // 3) scrollbarRef.value 未定义 -> 安全地跳过
+    await nextTick();
+
+    const sb = scrollbarRef.value;
+
+    if (!sb) return;
+
+    // 优先处理自定义组件：有 wrapRef 或 setScrollTop
+    const wrap = sb.wrapRef || sb.wrap || null;
+
+    if (
+      typeof sb.setScrollTop === "function" &&
+      wrap &&
+      wrap.scrollHeight != null
+    ) {
+      // 自定义组件提供了 setScrollTop，使用它（传入目标高度）
+      try {
+        sb.setScrollTop(wrap.scrollHeight);
+      } catch (e) {
+        // 回退到直接修改 DOM
+        if (wrap && typeof wrap.scrollTop !== "undefined")
+          wrap.scrollTop = wrap.scrollHeight;
+      }
+      return;
+    }
+
+    // 如果 scrollbarRef 本身就是 DOM 元素
+    const el = sb instanceof Element ? sb : wrap;
+    if (el && typeof el.scrollTop !== "undefined") {
+      // 将滚动位置设置为内容高度，确保滚到底部
+      el.scrollTop = el.scrollHeight;
+    }
+  },
+  { deep: true }
+);
 
 // Toggle Code Block Display
 function toggleCodeBlock(msgIdx, actionIndex) {
@@ -596,7 +627,6 @@ async function loadDemoConversation(query) {
 .app-container {
   display: flex;
   height: 100vh;
-  width: 100vw;
   overflow: hidden;
 
   /* ==================== Left Chat Panel ==================== */
