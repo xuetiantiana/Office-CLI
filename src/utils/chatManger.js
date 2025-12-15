@@ -1,3 +1,5 @@
+const API_ROOT = "http://4.246.80.15:2233"
+
 /**
  * chatStream - 使用 fetch + SSE 进行流式对话
  *
@@ -34,7 +36,7 @@ export const chatStream = async (payload, {
 
   try {
     // --- 4. 发送 fetch 请求 ---
-    const res = await fetch("http://20.1.170.90:2233/chat", {
+    const res = await fetch(API_ROOT+"/chat", {
       method: "POST",
       signal: controller.signal,
       headers: {
@@ -99,3 +101,26 @@ export const chatStream = async (payload, {
     onError?.(err);
   }
 };
+
+
+
+export const refreshPDF = (sessionId) =>{
+    return `${API_ROOT}/export_pdf/${sessionId}?t=` + Date.now();
+}
+
+
+export const checkPdf = async(url) => {
+  try {
+    const res = await fetch(url, {
+      method: "GET",
+    });
+
+    if (!res.ok) return false;
+
+    // 判断 Content-Type
+    const type = res.headers.get("content-type") || "";
+    return type.includes("pdf");
+  } catch (e) {
+    return false;
+  }
+}

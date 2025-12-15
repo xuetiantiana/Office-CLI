@@ -171,7 +171,7 @@
       </div>
       <div class="preview-content" id="previewContent">
         <div
-          v-if="true"
+          v-loading="loadingPdf"
           style="
             width: 100%;
             height: 100%;
@@ -179,7 +179,7 @@
             flex-direction: column;
           "
         >
-          <div
+          <!-- <div
             style="
               padding: 10px;
               background: #f8f9fa;
@@ -189,10 +189,10 @@
               align-items: center;
             "
           >
-            <!-- <span style="font-weight: 600; color: #0078d4"
+            <span style="font-weight: 600; color: #0078d4"
                   >Microsoft Word Document</span
-                > -->
-            <!-- <a
+                >
+            <a
                   :href="documentResult.previewContent"
                   download="Document.docx"
                   style="
@@ -204,26 +204,16 @@
                     font-size: 12px;
                   "
                   >⬇ Download Document</a
-                > -->
-          </div>
+                >
+          </div> -->
           <!-- <iframe
                 :src="`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(
                   documentResult.previewContent
                 )}`"
                 style="width: 100%; flex: 1; border: none; background: #fff"
               ></iframe> -->
-          <embed
-            v-if="chatHistory.length > 1"
-            src="http://20.1.170.90:2233/files/test.pdf"
-            type=""
-            style="height: 100%"
-          />
-        </div>
 
-        <div v-else-if="chatLoading" class="empty-state">
-          <i class="fas fa-file-word empty-icon"></i>
-          <p class="empty-text">Generating your document...</p>
-          <p class="empty-hint">Please wait while we process your request</p>
+          <embed :src="pdfBlobUrl" type="" style="height: 100%" />
         </div>
       </div>
     </div>
@@ -237,7 +227,7 @@ import { useRouter, useRoute } from "vue-router";
 import { onMounted } from "vue";
 import { escapeHtml, mapIcon, highlightJavaScript } from "@/utils/common.js";
 import axios from "axios";
-import { chatStream } from "@/utils/chatManger.js";
+import { chatStream, refreshPDF, checkPdf } from "@/utils/chatManger.js";
 import { ChatStop } from "@/service/api.ts";
 import { v4 as uuidv4 } from "uuid";
 
@@ -252,6 +242,9 @@ const previewSubtitle = ref("Waiting for generation...");
 
 const session_id = ref(null);
 const chatHistory = ref([]);
+const pdfUrl = ref("");
+const pdfBlobUrl = ref("");
+const isExistsPdf = ref(false);
 
 const textareaValue = ref("");
 const chatLoading = ref(false);
@@ -273,6 +266,8 @@ function loadSession(sessionId) {
 
   if (session) {
     chatHistory.value = session.chatHistory;
+    // reSetPDFUrl(sessionId)
+    pdfUrl.value = "";
 
     // 如果只有一条用户消息，需要自动请求 AI
     if (chatHistory.value.length === 1) {
@@ -363,6 +358,7 @@ const callChatStreamApi = async () => {
         // assistantMsg.streaming = false;
         console.log("🏁 完成:", final);
         chatLoading.value = false;
+        reSetPDFUrl(session_id.value);
       },
 
       onError: (err) => {
@@ -376,6 +372,34 @@ const callChatStreamApi = async () => {
 
   save();
 };
+
+const reSetPDFUrl = async (sessionId) => {
+  if (!sessionId) {
+    return;
+  }
+  let url = refreshPDF(sessionId);
+  loadPdf(url);
+};
+
+const loadingPdf = ref(false);
+
+async function loadPdf(PDF_API) {
+  loadingPdf.value = true;
+
+  try {
+    const res = await fetch(PDF_API);
+
+    if (!res.ok) throw new Error("PDF 请求失败");
+
+    const blob = await res.blob();
+    const blobUrl = URL.createObjectURL(blob);
+    pdfBlobUrl.value = blobUrl;
+  } catch (e) {
+    console.error(e);
+  } finally {
+    loadingPdf.value = false;
+  }
+}
 
 // ---- 保存 session 到 localStorage ----
 function save() {
@@ -415,9 +439,9 @@ function generateId() {
 const StopBtnClick = () => {
   if (session_id.value) {
     ChatStop({
-      "session_id": session_id.value,
-      "command": "stop"
-    })
+      session_id: session_id.value,
+      command: "stop",
+    });
   }
 };
 
