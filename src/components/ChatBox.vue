@@ -168,6 +168,14 @@
             >Waiting for generation...</span
           >
         </div>
+        <el-button
+          type="primary"
+          size="small"
+          :loading="loadingPdf"
+          :disabled="loadingPdf"
+          @click="reLoadPDF(session_id)"
+          >ReLoad PDF</el-button
+        >
       </div>
       <div class="preview-content" id="previewContent">
         <div
@@ -237,14 +245,10 @@ const props = defineProps({
 const router = useRouter();
 const route = useRoute();
 
-const previewTitle = ref("Document Preview");
-const previewSubtitle = ref("Waiting for generation...");
-
 const session_id = ref(null);
 const chatHistory = ref([]);
 const pdfUrl = ref("");
 const pdfBlobUrl = ref("");
-const isExistsPdf = ref(false);
 
 const textareaValue = ref("");
 const chatLoading = ref(false);
@@ -256,6 +260,10 @@ const documentResult = ref();
 const expandedCodeBlocks = ref({}); // 追踪代码块展开/折叠状态
 
 function loadSession(sessionId) {
+  chatHistory.value = [];
+  pdfBlobUrl.value = "";
+  pdfUrl.value = "";
+
   if (!sessionId) {
     return;
   }
@@ -266,18 +274,25 @@ function loadSession(sessionId) {
 
   if (session) {
     chatHistory.value = session.chatHistory;
-    // reSetPDFUrl(sessionId)
-    pdfUrl.value = "";
 
-    // 如果只有一条用户消息，需要自动请求 AI
+    // 如果只有一条用户消息，需要自动请求chat接口
     if (chatHistory.value.length === 1) {
-      console.log("请求接口");
-      //   await callAPI(messages.value[0].content);
       callChatStreamApi();
+      return;
     }
   } else {
     alert("该session_id无历史记录");
     router.push("/");
+    return;
+  }
+
+  // 已存在直接复用
+  console.log("pdfBlobMap", pdfBlobMap);
+  if (pdfBlobMap.has(sessionId)) {
+    pdfBlobUrl.value = pdfBlobMap.get(sessionId);
+    return;
+  } else {
+    // reLoadPDF(sessionId);
   }
 }
 // 页面首次进入
@@ -358,7 +373,7 @@ const callChatStreamApi = async () => {
         // assistantMsg.streaming = false;
         console.log("🏁 完成:", final);
         chatLoading.value = false;
-        reSetPDFUrl(session_id.value);
+        reLoadPDF(session_id.value);
       },
 
       onError: (err) => {
@@ -373,27 +388,38 @@ const callChatStreamApi = async () => {
   save();
 };
 
-const reSetPDFUrl = async (sessionId) => {
+const loadingPdf = ref(false);
+const pdfBlobMap = new Map(); // sessionId => blobUrl
+const MAX_CACHE = 10;
+
+async function reLoadPDF(sessionId) {
   if (!sessionId) {
     return;
   }
-  let url = refreshPDF(sessionId);
-  loadPdf(url);
-};
 
-const loadingPdf = ref(false);
-
-async function loadPdf(PDF_API) {
   loadingPdf.value = true;
 
   try {
-    const res = await fetch(PDF_API);
+    let url = refreshPDF(sessionId);
+    const res = await fetch(url);
 
     if (!res.ok) throw new Error("PDF 请求失败");
 
     const blob = await res.blob();
     const blobUrl = URL.createObjectURL(blob);
+    if (pdfBlobUrl.value) {
+      URL.revokeObjectURL(pdfBlobUrl.value);
+    }
     pdfBlobUrl.value = blobUrl;
+    pdfBlobMap.set(sessionId, blobUrl);
+
+    // ② 超过最大缓存数量 → 淘汰最早的
+    if (pdfBlobMap.size > MAX_CACHE) {
+      const [oldSessionId, oldBlobUrl] = pdfBlobMap.entries().next().value; //["最早插入的 sessionId", "对应的 blobUrl"]
+
+      URL.revokeObjectURL(oldBlobUrl);
+      pdfBlobMap.delete(oldSessionId);
+    }
   } catch (e) {
     console.error(e);
   } finally {
