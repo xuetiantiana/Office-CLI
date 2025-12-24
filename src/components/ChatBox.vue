@@ -48,13 +48,13 @@
             :class="msg.role == 'user' ? 'user-content' : ''"
           >
             <template v-if="msg.role === 'user'">
-              <div v-text="msg.text" style="white-space: pre-line"></div>
+              <div v-html="msg.text" style="white-space: pre-line"></div>
             </template>
 
             <template v-else>
               <div
                 style="margin-bottom: 8px; white-space: pre-line"
-                v-text="msg.text"
+                v-html="msg.text"
               ></div>
             </template>
             <template
@@ -235,7 +235,7 @@ import { useRouter, useRoute } from "vue-router";
 import { onMounted } from "vue";
 import { escapeHtml, mapIcon, highlightJavaScript } from "@/utils/common.js";
 import axios from "axios";
-import { chatStream, refreshPDF, checkPdf } from "@/utils/chatManger.js";
+import { chatStream, refreshPDF, getUpdatePdf } from "@/service/chatMangerApi.js";
 import { ChatStop } from "@/service/api.ts";
 import { v4 as uuidv4 } from "uuid";
 
@@ -292,7 +292,7 @@ function loadSession(sessionId) {
     pdfBlobUrl.value = pdfBlobMap.get(sessionId);
     return;
   } else {
-    // reLoadPDF(sessionId);
+    reLoadPDF(sessionId);
   }
 }
 // 页面首次进入
@@ -373,7 +373,9 @@ const callChatStreamApi = async () => {
         // assistantMsg.streaming = false;
         console.log("🏁 完成:", final);
         chatLoading.value = false;
-        reLoadPDF(session_id.value);
+        setTimeout(() => {
+          reLoadPDF(session_id.value);
+        }, 2000);
       },
 
       onError: (err) => {
@@ -390,7 +392,7 @@ const callChatStreamApi = async () => {
 
 const loadingPdf = ref(false);
 const pdfBlobMap = new Map(); // sessionId => blobUrl
-const MAX_CACHE = 10;
+const MAX_CACHE = 5;
 
 async function reLoadPDF(sessionId) {
   if (!sessionId) {
