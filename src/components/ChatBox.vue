@@ -113,7 +113,7 @@
       <div class="chat-input-container" style="position: relative">
         <ul v-if="chatHistory.length == 0" class="example-ul" style="">
           <li
-            v-for="item in scratchItems"
+            v-for="item in newCase"
             :key="item.query"
             :data-query="item.query"
             @click="sendExample(item)"
@@ -174,7 +174,7 @@
           :loading="loadingPdf"
           :disabled="loadingPdf"
           @click="reLoadPDF(session_id)"
-          >ReLoad PDF</el-button
+          >Reload Document</el-button
         >
       </div>
       <div class="preview-content" id="previewContent">
@@ -380,7 +380,7 @@ const callChatStreamApi = async () => {
 
       onError: (err) => {
         // assistantMsg.streaming = false;
-        assistantMsg.text += "\n[出错了]";
+        assistantMsg.text += "\n<i>[❌ An unexpected error occurred during the chat process. Please try again.]<i>";
         console.error("❌ error:", err);
         chatLoading.value = false;
       },
@@ -423,6 +423,10 @@ async function reLoadPDF(sessionId) {
       pdfBlobMap.delete(oldSessionId);
     }
   } catch (e) {
+      chatHistory.value.push({
+        role: "model",
+        text: "<i>[❌ Failed to load the document. Please manually click <b>‘Reload Document’</b> to try again.]<i>",
+      });
     console.error(e);
   } finally {
     loadingPdf.value = false;
@@ -595,11 +599,33 @@ const editItems = [
   { query: "add-toc", text: '"Add table of contents"' },
 ];
 
+const newCase = [
+  {
+    query: "meeting-minutes",
+    method: "scratch",
+    text: '"Create meeting minutes from recorded discussion"',
+  },
+  {
+    query: "proposal",
+    method: "scratch",
+    text: '"Write project proposal with timeline, budget, and deliverables"',
+  },
+  {
+    query: "daily-schedule",
+    method: "scratch",
+    text: '"Create a comprehensive and well-organized daily schedule"',
+  },
+  {
+    query: "basic-menu",
+    method: "template",
+    text: '"Create polished menu for backyard birthday dinner with three courses"',
+  },
+];
 // 默认信息（可根据需要扩展）
 const queryDefaultInfo = {
   "microsoft-report": `Company: Microsoft Corporation\nFiscal Quarter: Q1 FY2026\nKey Focus Areas: Cloud revenue growth, AI services impact, Azure performance, Office 365 adoption\nComparison Period: Q1 FY2025 and Q4 FY2025\nInclude: Revenue breakdown by segment, year-over-year growth rates, operating margins, strategic initiatives\nTone: Professional financial analysis for investors and stakeholders`,
   "meeting-minutes": `Meeting: Product Strategy Planning Session\nDate: October 22, 2024\nAttendees: Sarah Chen (CEO), Mike Johnson (CTO), Lisa Park (CPO), Tom Wilson (CFO)\nDuration: 2 hours\nKey Decisions:\n- Approved $2M budget for AI feature development\n- Q1 2025 product roadmap finalized\n- New pricing strategy for enterprise tier\nAction Items:\n- Mike to hire 3 ML engineers by November\n- Lisa to conduct user research on proposed features\n- Tom to prepare financial projections for board meeting\nFollow-up: Weekly sync meetings starting next Monday`,
-  proposal: `Meeting: Product Strategy Planning Session\nDate: October 22, 2024\nAttendees: Sarah Chen (CEO), Mike Johnson (CTO), Lisa Park (CPO), Tom Wilson (CFO)\nDuration: 2 hours\nKey Decisions:\n- Approved $2M budget for AI feature development\n- Q1 2025 product roadmap finalized\n- New pricing strategy for enterprise tier\nAction Items:\n- Mike to hire 3 ML engineers by November\n- Lisa to conduct user research on proposed features\n- Tom to prepare financial projections for board meeting\nFollow-up: Weekly sync meetings starting next Monday. Please read "reports/proposal.md" for more detail informations.`,
+  proposal: `Meeting: Product Strategy Planning Session\nDate: October 22, 2024\nAttendees: Sarah Chen (CEO), Mike Johnson (CTO), Lisa Park (CPO), Tom Wilson (CFO)\nDuration: 2 hours\nKey Decisions:\n- Approved $2M budget for AI feature development\n- Q1 2025 product roadmap finalized\n- New pricing strategy for enterprise tier\nAction Items:\n- Mike to hire 3 ML engineers by November\n- Lisa to conduct user research on proposed features\n- Tom to prepare financial projections for board meeting\nFollow-up: Weekly sync meetings starting next Monday.`,
   rewrite: `None`,
   summarize: `Key sections to focus on:\n- Strategic objectives and business value proposition\n- Budget breakdown by phase and resource allocation\n- Critical milestones and timeline dependencies\n- Risk mitigation strategies and contingency plans\n- ROI projections and success metrics (35% cost reduction, 50% processing improvement)\n- Technology stack and infrastructure decisions\n- Resource requirements and team composition`,
   translate: `None`,
