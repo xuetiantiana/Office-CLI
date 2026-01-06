@@ -1,16 +1,16 @@
 <template>
   <div class="sidebar-content">
-    <el-button @click="create" style="font-size: 1em;">+ New Chat</el-button>
+    <el-button @click="create" style="font-size: 1em">+ New Chat</el-button>
     <p class="chat-list-h2">我的聊天</p>
     <ul>
       <li
         v-for="(item, index) in sessions"
         :key="item.session_id"
         class="item"
-        @click="go(item.session_id)"
+        @click="go(item.session_id,item.session_title || null)"
         :class="{ active: route.params.sessionId == item.session_id }"
       >
-        <span>{{ item.title || "Chat " + (index + 1) }}</span>
+        <span>{{ item.session_title || "New Chat" }}</span>
 
         <!-- 删除按钮 -->
         <el-button
@@ -42,6 +42,7 @@ function load() {
   sessions.value = JSON.parse(
     localStorage.getItem("session_id_chat_history_list") || "[]"
   );
+  console.log("111111", sessions.value);
 }
 
 function save() {
@@ -55,8 +56,14 @@ function create() {
   router.push("/");
 }
 
-function go(id) {
-  router.push(`/chat/${id}`);
+function go(id,title) {
+  // router.push(`/chat/${id}`);
+  router.push({
+  path: `/chat/${id}`,
+  query: {
+    title
+  }
+})
 }
 
 // 删除某个聊天
@@ -71,26 +78,28 @@ function remove(id) {
 
 // 删除前确认
 function confirmRemove(id) {
-  ElMessageBox.confirm(
-    '确定要删除这个聊天吗？',
-    '删除确认',
-    {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning',
-    }
-  ).then(() => {
-    remove(id);
-    ElMessage({
-      type: 'success',
-      message: '删除成功'
+  ElMessageBox.confirm("确定要删除这个聊天吗？", "删除确认", {
+    confirmButtonText: "确定",
+    cancelButtonText: "取消",
+    type: "warning",
+  })
+    .then(() => {
+      remove(id);
+      ElMessage({
+        type: "success",
+        message: "删除成功",
+      });
+    })
+    .catch(() => {
+      // 用户取消删除
     });
-  }).catch(() => {
-    // 用户取消删除
-  });
 }
 
 onMounted(load);
+
+defineExpose({
+  load,
+});
 </script>
 
 <style lang="scss" scoped>
@@ -109,10 +118,11 @@ onMounted(load);
   }
   ul {
     .item {
-      padding: 0.4em 1em;
+      padding: 0.4em 1.5em 0.4em 0.5em;
       position: relative;
       cursor: pointer;
       border-radius: 6px;
+      margin-bottom: .2em;
       &:hover {
         background: #0000000a;
       }
@@ -122,7 +132,10 @@ onMounted(load);
       .delete-btn {
         position: absolute;
         right: 0em;
+        top: .1em;
         color: rgba(0, 0, 0, 0.3);
+        padding: 0.2em;
+        font-size: 1.2em;
       }
     }
   }

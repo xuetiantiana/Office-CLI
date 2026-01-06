@@ -135,6 +135,26 @@
             @keydown.enter.exact.prevent="sendMessage"
             @keydown.shift.enter
           ></textarea>
+          <div class="image-uploader">
+            <!-- <input
+              type="file"
+              accept="image/*"
+              multiple
+              @change="onFileChange"
+            /> -->
+            <el-upload
+              ref="uploadRef"
+              :auto-upload="false"
+              :show-file-list="false"
+              accept="image/*"
+              multiple
+              @change="onFileChange"
+            >
+              <el-button plain style="width: 44px; height: 44px"
+                ><el-icon><Picture /></el-icon
+              ></el-button>
+            </el-upload>
+          </div>
 
           <template v-if="!chatLoading">
             <button
@@ -156,6 +176,18 @@
               <i class="fas fa-spinner fa-spin"></i>
             </button>
           </template>
+        </div>
+        <!-- 图片列表 -->
+        <div class="image-list" v-if="files.length">
+          <div class="image-item" v-for="(item, index) in files" :key="item.id">
+            <img :src="item.url" />
+            <div class="info">
+              <span class="name">{{ item.file.name }}</span>
+              <button class="delete-btn" @click="removeImage(index)">
+                删除
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -231,11 +263,16 @@
 <script setup>
 import { ref, reactive, nextTick, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
+import { Picture } from "@element-plus/icons-vue";
 
 import { onMounted } from "vue";
 import { escapeHtml, mapIcon, highlightJavaScript } from "@/utils/common.js";
 import axios from "axios";
-import { chatStream, refreshPDF, getUpdatePdf } from "@/service/chatMangerApi.js";
+import {
+  chatStream,
+  refreshPDF,
+  getUpdatePdf,
+} from "@/service/chatMangerApi.js";
 import { ChatStop } from "@/service/api.ts";
 import { v4 as uuidv4 } from "uuid";
 
@@ -246,6 +283,7 @@ const router = useRouter();
 const route = useRoute();
 
 const session_id = ref(null);
+const sessionTitle = ref(null);
 const chatHistory = ref([]);
 const pdfUrl = ref("");
 const pdfBlobUrl = ref("");
@@ -299,6 +337,8 @@ function loadSession(sessionId) {
 onMounted(async () => {
   session_id.value = props.sessionId;
   loadSession(props.sessionId);
+
+  sessionTitle.value = route.query.title;
 });
 // 切换 session_id
 watch(
@@ -336,6 +376,22 @@ const sendMessage = async () => {
   }
 };
 
+const files = ref([]);
+const selectedFiles = ref();
+const onFileChange = (uploadFile, uploadFiles) => {
+  files.value = [];
+  selectedFiles.value = [];
+  uploadFiles.forEach((item) => {
+    const file = item.raw;
+    if (!file) return;
+    selectedFiles.value.push(file);
+    files.value.push({
+      id: generateId(),
+      file,
+      url: URL.createObjectURL(file),
+    });
+  });
+};
 const callChatStreamApi = async () => {
   chatLoading.value = true;
   // ② push assistant 空消息（准备流式填充）
@@ -354,11 +410,22 @@ const callChatStreamApi = async () => {
   if (!session_id.value) {
     session_id.value = generateId();
   }
+
+  const fd = new FormData();
+
+  const payload = {
+    session_id: session_id.value,
+    messages: chatHistory.value,
+  };
+  fd.append("payload", payload);
+
+  // 图片字段：全部放到 form.file -> file
+  // selectedFiles.value.forEach(file => {
+  //   fd.append("images", file);
+  // });
+
   await chatStream(
-    {
-      session_id: session_id.value,
-      messages: chatHistory.value,
-    },
+    { payload: payload, images: selectedFiles.value },
     {
       onStart: () => {
         console.log("🔵 onStart");
@@ -376,11 +443,18 @@ const callChatStreamApi = async () => {
         setTimeout(() => {
           reLoadPDF(session_id.value);
         }, 2000);
+        if (!sessionTitle.value) {
+          setChatName();
+        }
+
+        files.value = [];
+        selectedFiles.value = [];
       },
 
       onError: (err) => {
         // assistantMsg.streaming = false;
-        assistantMsg.text += "\n<i>[❌ An unexpected error occurred during the chat process. Please try again.]<i>";
+        assistantMsg.text +=
+          "\n<i>[❌ An unexpected error occurred during the chat process. Please try again.]<i>";
         console.error("❌ error:", err);
         chatLoading.value = false;
       },
@@ -388,6 +462,51 @@ const callChatStreamApi = async () => {
   );
 
   save();
+};
+
+const emit = defineEmits(["updateSessionTitleList"]);
+const setChatName = async () => {
+  let title = "";
+  const payload = {
+    session_id: session_id.value,
+    messages: [
+      ...chatHistory.value,
+      {
+        role: "user",
+        text: '把我们的对话，总结一个chat的名字，返回成json，如{“name”: "xxx“, "has_name": true}，如果没有相关的名字，返回给我{“name”: "NewChat“, "has_name": false}',
+      },
+    ],
+  };
+  await chatStream(
+    { payload: payload },
+    {
+      onStart: () => {
+        console.log("🔵 onStart");
+      },
+
+      onDelta: (delta) => {
+        console.log("onDelta", delta);
+        title += delta; // 🔥 实时流式显示
+      },
+
+      onEnd: (final) => {
+        // assistantMsg.streaming = false;
+        console.log("🏁 完成:", final, title);
+
+        const result = parseChatJson(title);
+        if (result.has_name) {
+          sessionTitle.value = result.name;
+        }
+        save();
+        // 更新sessionList的title显示
+        emit("updateSessionTitleList", { sessionId: session_id.value });
+      },
+
+      onError: (err) => {
+        console.error("❌ error:", err);
+      },
+    }
+  );
 };
 
 const loadingPdf = ref(false);
@@ -423,10 +542,10 @@ async function reLoadPDF(sessionId) {
       pdfBlobMap.delete(oldSessionId);
     }
   } catch (e) {
-      chatHistory.value.push({
-        role: "model",
-        text: "<i>[❌ Failed to load the document. Please manually click <b>‘Reload Document’</b> to try again.]<i>",
-      });
+    chatHistory.value.push({
+      role: "model",
+      text: "<i>[❌ Failed to load the document. Please manually click <b>‘Reload Document’</b> to try again.]<i>",
+    });
     console.error(e);
   } finally {
     loadingPdf.value = false;
@@ -443,6 +562,7 @@ function save() {
   );
 
   if (idx !== -1) {
+    chatHistoryList[idx].session_title = sessionTitle.value;
     chatHistoryList[idx].chatHistory = chatHistory.value;
     localStorage.setItem(
       "session_id_chat_history_list",
@@ -698,6 +818,24 @@ async function loadDemoConversation(query) {
     chatLoading.value = false;
     return;
   }
+}
+
+function parseChatJson(text) {
+  const match = text.match(/```json\s*([\s\S]*?)\s*```/);
+
+  if (!match) return null;
+
+  try {
+    return JSON.parse(match[1]);
+  } catch (err) {
+    console.error("JSON parse error:", err);
+    return null;
+  }
+}
+
+function removeImage(index) {
+  URL.revokeObjectURL(files.value[index].url);
+  files.value.splice(index, 1);
 }
 </script>
 
@@ -1396,6 +1534,53 @@ async function loadDemoConversation(query) {
 
   .action-code-content .punctuation {
     color: #d4d4d4;
+  }
+}
+
+.image-uploader {
+  .select-btn {
+    padding: 6px 14px;
+    cursor: pointer;
+  }
+}
+
+.image-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 12px;
+  .image-item {
+    width: 120px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 6px;
+    text-align: center;
+  }
+
+  .image-item img {
+    width: 100%;
+    height: 80px;
+    object-fit: cover;
+    border-radius: 4px;
+  }
+
+  .info {
+    margin-top: 6px;
+  }
+
+  .name {
+    display: block;
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .delete-btn {
+    margin-top: 4px;
+    font-size: 12px;
+    color: red;
+    cursor: pointer;
   }
 }
 </style>

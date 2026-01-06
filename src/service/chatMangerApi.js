@@ -1,4 +1,6 @@
-const API_ROOT = "http://4.246.80.15:2233"
+// const API_ROOT = "http://4.246.80.15:2233"
+const API_ROOT = "http://10.18.209.75:2233"
+
 import axios from 'axios';
 
 /**
@@ -7,7 +9,7 @@ import axios from 'axios';
  * @param text 用户输入的文本
  * @param handlers 回调函数：onStart / onDelta / onEnd / onError
  */
-export const chatStream = async (payload, {
+export const chatStream = async (dataAAA, {
   onStart,
   onDelta,
   onEnd,
@@ -15,9 +17,9 @@ export const chatStream = async (payload, {
 }) => {
 
   // --- 1. session_id 确保存在 ---
-//   if (!seeeion_id.value) {
-//     seeeion_id.value = generateId();
-//   }
+  //   if (!seeeion_id.value) {
+  //     seeeion_id.value = generateId();
+  //   }
 
   // --- 2. 创建可取消控制器（支持手动取消 & 超时取消） ---
   const controller = new AbortController();
@@ -26,25 +28,33 @@ export const chatStream = async (payload, {
   // setTimeout(() => controller.abort(), 20000);
 
   // --- 3. 前端发送给后端的 payload ---
-//   const payload = {
-//     messages: [{ role: "user", content: text }],
-//     model: "gpt-4o-mini",
-//     stream: true,      // 🚀 必须为 true 才能流式返回
-//     max_tokens: 2048,
-//     temperature: 0.7,
-//     metadata: { session_id: seeeion_id },
-//   };
+  //   const payload = {
+  //     messages: [{ role: "user", content: text }],
+  //     model: "gpt-4o-mini",
+  //     stream: true,      // 🚀 必须为 true 才能流式返回
+  //     max_tokens: 2048,
+  //     temperature: 0.7,
+  //     metadata: { session_id: seeeion_id },
+  //   };
+  const formData = new FormData()
+  formData.append('chat', JSON.stringify(dataAAA.payload))
+  if (dataAAA.images && dataAAA.images.length > 0) {
+    dataAAA.images.forEach(file => {
+      formData.append("images", file);
+    });
+  }
 
   try {
     // --- 4. 发送 fetch 请求 ---
-    const res = await fetch(API_ROOT+"/chat", {
+    const res = await fetch(API_ROOT + "/chat", {
       method: "POST",
-      signal: controller.signal,
+      // signal: controller.signal,
       headers: {
-        "Content-Type": "application/json", // POST body 是 JSON
+        // "Content-Type": "application/json", // POST body 是 JSON
+        // "Content-Type": "multipart/form-data",
         Accept: "text/event-stream",        // 请求 SSE 流式返回
       },
-      body: JSON.stringify(payload),
+      body: formData,
     });
 
     console.log("连接成功:", res);
@@ -76,20 +86,20 @@ export const chatStream = async (payload, {
     while (true) {
       const { value, done } = await reader.read();
       if (done) break;
-        
+
       const chunk = decoder.decode(value, { stream: true });
- 
-        // SSE data 格式：  data: {"type":"delta","delta":"xxx"}
-        chunk.split("\n").forEach((line) => {
-            if (line.startsWith("data: ")) {
-                const payload = JSON.parse(line.substring(6));
-                if (payload.type === "delta") {
-                    onDelta(payload.delta);
-                }else if(payload.type === "end"){
-                    onEnd()
-                }
-            }
-        })
+
+      // SSE data 格式：  data: {"type":"delta","delta":"xxx"}
+      chunk.split("\n").forEach((line) => {
+        if (line.startsWith("data: ")) {
+          const payload = JSON.parse(line.substring(6));
+          if (payload.type === "delta") {
+            onDelta(payload.delta);
+          } else if (payload.type === "end") {
+            onEnd()
+          }
+        }
+      })
     }
 
   } catch (err) {
@@ -105,12 +115,12 @@ export const chatStream = async (payload, {
 
 
 
-export const refreshPDF = (sessionId) =>{
-    return `${API_ROOT}/export_pdf/${sessionId}?t=` + Date.now();
+export const refreshPDF = (sessionId) => {
+  return `${API_ROOT}/export_pdf/${sessionId}?t=` + Date.now();
 }
 
 export const getUpdatePdf = (sessionId) => {
-    return axios.get(`${API_ROOT}/chat/get_update/${sessionId}`)
+  return axios.get(`${API_ROOT}/chat/get_update/${sessionId}`)
 }
 
 

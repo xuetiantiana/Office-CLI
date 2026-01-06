@@ -1,7 +1,7 @@
 <template>
   <div class="chat-template">
-    <ChatSidebar class="chat-sidebar" />
-    <ChatBox class="chat-box" :sessionId="sessionId" />
+    <ChatSidebar class="chat-sidebar" ref="ChatSidebarRef"/>
+    <ChatBox class="chat-box" :sessionId="sessionId" @updateSessionTitleList="updateSessionTitleList"/>
   </div>
 </template>
 
@@ -12,7 +12,7 @@ import ChatBox from "@/components/ChatBox.vue";
 import ChatSidebar from "@/components/ChatSidebar.vue";
 
 const route = useRoute();
-
+const ChatSidebarRef = ref(null)
 // const sessionId = useRoute().params.sessionId;
 const sessionId = ref(null);
 sessionId.value = route.params.sessionId;
@@ -24,6 +24,12 @@ watch(
     sessionId.value = newId;
   }
 );
+
+
+function updateSessionTitleList(payload) {
+  console.log('父组件方法被调用：', payload)
+  ChatSidebarRef.value.load()
+}
 </script>
 
 
