@@ -134,14 +134,12 @@
             rows="1"
             @keydown.enter.exact.prevent="sendMessage"
             @keydown.shift.enter
+            @paste="onPaste"
+            @dragover.prevent
+            @drop="onDrop"
           ></textarea>
-          <div class="image-uploader">
-            <!-- <input
-              type="file"
-              accept="image/*"
-              multiple
-              @change="onFileChange"
-            /> -->
+          <!-- <div class="image-uploader">
+           
             <el-upload
               ref="uploadRef"
               :auto-upload="false"
@@ -154,7 +152,7 @@
                 ><el-icon><Picture /></el-icon
               ></el-button>
             </el-upload>
-          </div>
+          </div> -->
 
           <template v-if="!chatLoading">
             <button
@@ -377,19 +375,62 @@ const sendMessage = async () => {
 };
 
 const files = ref([]);
-const selectedFiles = ref();
+const selectedFiles = ref([]);
 const onFileChange = (uploadFile, uploadFiles) => {
   files.value = [];
   selectedFiles.value = [];
   uploadFiles.forEach((item) => {
     const file = item.raw;
     if (!file) return;
+
+    console.log(file);
     selectedFiles.value.push(file);
     files.value.push({
       id: generateId(),
       file,
       url: URL.createObjectURL(file),
     });
+  });
+};
+
+// 粘贴图片
+const onPaste = (e) => {
+  const items = e.clipboardData?.items;
+  if (!items) return;
+
+  for (const item of items) {
+    if (item.kind === "file" && item.type.startsWith("image/")) {
+      const file = item.getAsFile();
+      console.log(file);
+      selectedFiles.value.push(file);
+      files.value.push({
+        id: generateId(),
+        file,
+        url: URL.createObjectURL(file),
+      });
+      e.preventDefault(); // 阻止图片变成乱码文字
+      break;
+    }
+  }
+};
+
+// 拖拽图片
+const onDrop = (e) => {
+  e.preventDefault();
+
+  const filesLL = e.dataTransfer?.files;
+  if (!filesLL || !filesLL.length) return;
+
+  const file = filesLL[0];
+  if (!file.type.startsWith("image/")) return;
+
+  // imageUrl.value = URL.createObjectURL(file)
+  selectedFiles.value.push(file);
+  console.log(files.value, file);
+  files.value.push({
+    id: generateId(),
+    file,
+    url: URL.createObjectURL(file),
   });
 };
 const callChatStreamApi = async () => {
