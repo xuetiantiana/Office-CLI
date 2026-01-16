@@ -52,6 +52,11 @@
             </template>
 
             <template v-else>
+              <div class="loading-container" v-if="chatLoading && !msg.text">
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
               <div
                 style="margin-bottom: 8px; white-space: pre-line"
                 v-html="msg.text"
@@ -138,21 +143,20 @@
             @dragover.prevent
             @drop="onDrop"
           ></textarea>
-          <!-- <div class="image-uploader">
-           
+          <div class="image-uploader">
             <el-upload
               ref="uploadRef"
               :auto-upload="false"
               :show-file-list="false"
-              accept="image/*"
+              accept="image/*, application/msword, application/vnd.openxmlformats-officedocument.wordprocessingml.document, application/vnd.ms-excel, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, text/plain"
               multiple
               @change="onFileChange"
             >
               <el-button plain style="width: 44px; height: 44px"
-                ><el-icon><Picture /></el-icon
+                ><el-icon><Upload /></el-icon
               ></el-button>
             </el-upload>
-          </div> -->
+          </div>
 
           <template v-if="!chatLoading">
             <button
@@ -175,10 +179,35 @@
             </button>
           </template>
         </div>
-        <!-- 图片列表 -->
-        <div class="image-list" v-if="files.length">
-          <div class="image-item" v-for="(item, index) in files" :key="item.id">
-            <img :src="item.url" />
+        <!-- 文件列表 -->
+        <div class="file-list" v-if="selectFilesObjsArray.length">
+          <div
+            class="file-item"
+            v-for="(item, index) in selectFilesObjsArray"
+            :key="item.id"
+          >
+            <div class="file-preview">
+              <img v-if="item.isImage" :src="item.url" class="file-image" />
+              <div v-else class="file-icon-wrapper">
+                <i
+                  v-if="item.fileType === 'word'"
+                  class="fas fa-file-word file-icon word"
+                ></i>
+                <i
+                  v-else-if="item.fileType === 'excel'"
+                  class="fas fa-file-excel file-icon excel"
+                ></i>
+                <i
+                  v-else-if="item.fileType === 'txt'"
+                  class="fas fa-file-alt file-icon txt"
+                ></i>
+                <i
+                  v-else-if="item.fileType === 'pdf'"
+                  class="fas fa-file-pdf file-icon pdf"
+                ></i>
+                <i v-else class="fas fa-file file-icon other"></i>
+              </div>
+            </div>
             <div class="info">
               <span class="name">{{ item.file.name }}</span>
               <button class="delete-btn" @click="removeImage(index)">
@@ -261,7 +290,7 @@
 <script setup>
 import { ref, reactive, nextTick, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
-import { Picture } from "@element-plus/icons-vue";
+import { Upload } from "@element-plus/icons-vue";
 
 import { onMounted } from "vue";
 import { escapeHtml, mapIcon, highlightJavaScript } from "@/utils/common.js";
@@ -374,64 +403,78 @@ const sendMessage = async () => {
   }
 };
 
-const files = ref([]);
-const selectedFiles = ref([]);
+const selectFilesObjsArray = ref([]);
 const onFileChange = (uploadFile, uploadFiles) => {
-  files.value = [];
-  selectedFiles.value = [];
+  selectFilesObjsArray.value = [];
+
   uploadFiles.forEach((item) => {
     const file = item.raw;
     if (!file) return;
-
-    console.log(file);
-    selectedFiles.value.push(file);
-    files.value.push({
-      id: generateId(),
-      file,
-      url: URL.createObjectURL(file),
-    });
+    processFile(file);
   });
 };
 
-// 粘贴图片
+// 处理单个文件的辅助函数
+const processFile = (file) => {
+  console.log(file);
+
+  // 确定文件类型
+  let fileType = "other";
+  if (file.type.startsWith("image/")) {
+    fileType = "image";
+  } else if (
+    file.type === "application/msword" ||
+    file.type ===
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+  ) {
+    fileType = "word";
+  } else if (
+    file.type === "application/vnd.ms-excel" ||
+    file.type ===
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+  ) {
+    fileType = "excel";
+  } else if (file.type === "text/plain") {
+    fileType = "txt";
+  } else if (file.type === "application/pdf") {
+    fileType = "pdf";
+  }
+
+  selectFilesObjsArray.value.push({
+    id: generateId(),
+    file,
+    url: URL.createObjectURL(file),
+    fileType,
+    isImage: fileType === "image",
+  });
+};
+
+// 粘贴文件（支持图片、Word、Excel、TXT等文档）
 const onPaste = (e) => {
   const items = e.clipboardData?.items;
   if (!items) return;
 
   for (const item of items) {
-    if (item.kind === "file" && item.type.startsWith("image/")) {
+    if (item.kind === "file") {
       const file = item.getAsFile();
-      console.log(file);
-      selectedFiles.value.push(file);
-      files.value.push({
-        id: generateId(),
-        file,
-        url: URL.createObjectURL(file),
-      });
-      e.preventDefault(); // 阻止图片变成乱码文字
-      break;
+      processFile(file);
+      e.preventDefault(); // 阻止文件内容变成乱码文字
     }
   }
 };
 
-// 拖拽图片
+// 拖拽文件（支持图片、Word、Excel、TXT等文档）
 const onDrop = (e) => {
   e.preventDefault();
 
   const filesLL = e.dataTransfer?.files;
   if (!filesLL || !filesLL.length) return;
 
-  const file = filesLL[0];
-  if (!file.type.startsWith("image/")) return;
-
-  // imageUrl.value = URL.createObjectURL(file)
-  selectedFiles.value.push(file);
-  console.log(files.value, file);
-  files.value.push({
-    id: generateId(),
-    file,
-    url: URL.createObjectURL(file),
-  });
+  // 处理所有拖拽的文件
+  for (let i = 0; i < filesLL.length; i++) {
+    const file = filesLL[i];
+    processFile(file);
+  }
 };
 const callChatStreamApi = async () => {
   chatLoading.value = true;
@@ -466,7 +509,12 @@ const callChatStreamApi = async () => {
   // });
 
   await chatStream(
-    { payload: payload, images: selectedFiles.value },
+    {
+      payload: payload,
+      images: selectFilesObjsArray.value
+        .filter((item) => item.isImage)
+        .map((item) => item.file),
+    },
     {
       onStart: () => {
         console.log("🔵 onStart");
@@ -488,8 +536,7 @@ const callChatStreamApi = async () => {
           setChatName();
         }
 
-        files.value = [];
-        selectedFiles.value = [];
+        selectFilesObjsArray.value = [];
       },
 
       onError: (err) => {
@@ -514,6 +561,7 @@ const setChatName = async () => {
       ...chatHistory.value,
       {
         role: "user",
+        // 修改chat，使chat尽量总结出一个title 、、test
         text: '把我们的对话，总结一个chat的名字，返回成json，如{“name”: "xxx“, "has_name": true}，如果没有相关的名字，返回给我{“name”: "NewChat“, "has_name": false}',
       },
     ],
@@ -875,8 +923,8 @@ function parseChatJson(text) {
 }
 
 function removeImage(index) {
-  URL.revokeObjectURL(files.value[index].url);
-  files.value.splice(index, 1);
+  URL.revokeObjectURL(selectFilesObjsArray.value[index].url);
+  selectFilesObjsArray.value.splice(index, 1);
 }
 </script>
 
@@ -1427,7 +1475,6 @@ function removeImage(index) {
     position: absolute;
     left: 0;
     right: 0;
-    bottom: 80px;
     padding: 10px 24px;
     li {
       padding: 10px 14px;
@@ -1454,7 +1501,8 @@ function removeImage(index) {
   position: absolute;
   left: 0;
   right: 0;
-  bottom: 80px;
+  top: 10px;
+  transform: translateY(-100%);
   padding: 10px 24px;
   li {
     padding: 10px 14px;
@@ -1585,12 +1633,12 @@ function removeImage(index) {
   }
 }
 
-.image-list {
+.file-list {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
   margin-top: 12px;
-  .image-item {
+  .file-item {
     width: 120px;
     border: 1px solid #ddd;
     border-radius: 6px;
@@ -1598,11 +1646,53 @@ function removeImage(index) {
     text-align: center;
   }
 
-  .image-item img {
+  .file-preview {
     width: 100%;
     height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    background-color: #f5f5f5;
+  }
+
+  .file-image {
+    width: 100%;
+    height: 100%;
     object-fit: cover;
     border-radius: 4px;
+  }
+
+  .file-icon-wrapper {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .file-icon {
+    font-size: 40px;
+  }
+
+  .file-icon.word {
+    color: #2b579a;
+  }
+
+  .file-icon.excel {
+    color: #1e7145;
+  }
+
+  .file-icon.pdf {
+    color: #d63638;
+  }
+
+  .file-icon.txt {
+    color: #333;
+  }
+
+  .file-icon.other {
+    color: #666;
   }
 
   .info {
@@ -1622,6 +1712,48 @@ function removeImage(index) {
     font-size: 12px;
     color: red;
     cursor: pointer;
+  }
+}
+
+.loading-container {
+  display: flex;
+  align-items: center;
+  height: 2em;
+  gap: 0.5em;
+  padding-left: 2em;
+  & span {
+    content: "";
+    width: 0.8em;
+    height: 0.8em;
+    border-radius: 50%;
+    background-color: #05408c;
+    opacity: 0.4;
+    animation: loadingBounce 1.4s infinite ease-in-out both;
+  }
+
+  & span:nth-child(1) {
+    animation-delay: -2s;
+  }
+
+  & span:nth-child(2) {
+    animation-delay: -4s;
+  }
+
+  & span {
+    display: inline-block;
+  }
+}
+
+@keyframes loadingBounce {
+  0%,
+  80%,
+  100% {
+    transform: scale(0.5);
+    opacity: 0.4;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
   }
 }
 </style>
