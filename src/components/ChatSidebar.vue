@@ -7,8 +7,12 @@
         v-for="(item, index) in sessions"
         :key="item.session_id"
         class="item"
-        @click="go(item.session_id,item.session_title || null)"
+        @click="go(item.session_id, item.session_title || null)"
         :class="{ active: route.params.sessionId == item.session_id }"
+        :style="{
+          display:
+            !item.session_title && index < sessions.length - 1 ? 'none' : '',
+        }"
       >
         <span>{{ item.session_title || "New Chat" }}</span>
 
@@ -56,14 +60,14 @@ function create() {
   router.push("/");
 }
 
-function go(id,title) {
+function go(id, title) {
   // router.push(`/chat/${id}`);
   router.push({
-  path: `/chat/${id}`,
-  query: {
-    title
-  }
-})
+    path: `/chat/${id}`,
+    query: {
+      title,
+    },
+  });
 }
 
 // 删除某个聊天
@@ -122,7 +126,7 @@ defineExpose({
       position: relative;
       cursor: pointer;
       border-radius: 6px;
-      margin-bottom: .2em;
+      margin-bottom: 0.2em;
       &:hover {
         background: #0000000a;
       }
@@ -132,7 +136,7 @@ defineExpose({
       .delete-btn {
         position: absolute;
         right: 0em;
-        top: .1em;
+        top: 0.1em;
         color: rgba(0, 0, 0, 0.3);
         padding: 0.2em;
         font-size: 1.2em;

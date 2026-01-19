@@ -180,7 +180,7 @@
           </template>
         </div>
         <!-- 文件列表 -->
-        <div class="file-list" v-if="selectFilesObjsArray.length">
+        <div class="file-list" v-if="selectFilesObjsArray.length > 0">
           <div
             class="file-item"
             v-for="(item, index) in selectFilesObjsArray"
@@ -302,6 +302,7 @@ import {
 } from "@/service/chatMangerApi.js";
 import { ChatStop } from "@/service/api.ts";
 import { v4 as uuidv4 } from "uuid";
+import { useFileStore } from "@/stores/fileStore.js";
 
 const props = defineProps({
   sessionId: String,
@@ -319,6 +320,7 @@ const textareaValue = ref("");
 const chatLoading = ref(false);
 
 const scrollbarRef = ref(null);
+const uploadRef = ref(null);
 
 const documentResult = ref();
 
@@ -363,9 +365,21 @@ function loadSession(sessionId) {
 // 页面首次进入
 onMounted(async () => {
   session_id.value = props.sessionId;
-  loadSession(props.sessionId);
+  
 
   sessionTitle.value = route.query.title;
+  // 使用Pinia store获取待传递的文件
+  const fileStore = useFileStore();
+  const pendingFiles = fileStore.getAndClearPendingFiles();
+  
+  if (pendingFiles.length > 0) {
+    selectFilesObjsArray.value = pendingFiles;
+    console.log("onMounted: Received files from store", pendingFiles);
+  }
+  console.log("onMounted", selectFilesObjsArray.value)
+
+  loadSession(props.sessionId);
+
 });
 // 切换 session_id
 watch(
@@ -396,6 +410,11 @@ const sendMessage = async () => {
       session_id.value = generateId();
     }
     save();
+    // 使用Pinia store存储待传递的文件
+    const fileStore = useFileStore();
+    fileStore.setPendingFiles(selectFilesObjsArray.value);
+    
+    // 跳转到聊天页面
     router.push(`/chat/${session_id.value}`);
   } else {
     // 在chat页面
@@ -405,13 +424,16 @@ const sendMessage = async () => {
 
 const selectFilesObjsArray = ref([]);
 const onFileChange = (uploadFile, uploadFiles) => {
-  selectFilesObjsArray.value = [];
-
+  // selectFilesObjsArray.value = [];
+  
   uploadFiles.forEach((item) => {
     const file = item.raw;
     if (!file) return;
     processFile(file);
   });
+  
+  // 清空上传组件
+  uploadRef.value?.clearFiles();
 };
 
 // 处理单个文件的辅助函数
@@ -512,7 +534,7 @@ const callChatStreamApi = async () => {
     {
       payload: payload,
       images: selectFilesObjsArray.value
-        .filter((item) => item.isImage)
+        // .filter((item) => item.isImage)
         .map((item) => item.file),
     },
     {
