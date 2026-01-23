@@ -153,7 +153,7 @@
               @change="onFileChange"
             >
               <el-button plain style="width: 44px; height: 44px"
-                ><el-icon><Upload /></el-icon
+                ><el-icon><Plus /></el-icon
               ></el-button>
             </el-upload>
           </div>
@@ -290,7 +290,7 @@
 <script setup>
 import { ref, reactive, nextTick, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
-import { Upload } from "@element-plus/icons-vue";
+import { Plus } from "@element-plus/icons-vue";
 
 import { onMounted } from "vue";
 import { escapeHtml, mapIcon, highlightJavaScript } from "@/utils/common.js";
@@ -551,11 +551,11 @@ const callChatStreamApi = async () => {
         // assistantMsg.streaming = false;
         console.log("🏁 完成:", final);
         chatLoading.value = false;
-        setTimeout(() => {
-          reLoadPDF(session_id.value);
-        }, 2000);
+
         if (!sessionTitle.value) {
           setChatName();
+        }else{
+          reLoadPDF(session_id.value);
         }
 
         selectFilesObjsArray.value = [];
@@ -584,7 +584,7 @@ const setChatName = async () => {
       {
         role: "user",
         // 修改chat，使chat尽量总结出一个title 、、test
-        text: '把我们的对话，总结一个chat的名字，返回成json，如{“name”: "xxx“, "has_name": true}，如果没有相关的名字，返回给我{“name”: "NewChat“, "has_name": false}',
+        text: '把我们的对话，总结一个chat的名字，返回成json，如{“name”: "xxx“, "has_name": true}，如果没有相关的名字，返回给我{“name”: "NewChat“, "has_name": false}。标题语言需与对话语言一致（中文返回中文，英文返回英文）',
       },
     ],
   };
@@ -607,6 +607,7 @@ const setChatName = async () => {
         const result = parseChatJson(title);
         if (result.has_name) {
           sessionTitle.value = result.name;
+          reLoadPDF(session_id.value);
         }
         save();
         // 更新sessionList的title显示

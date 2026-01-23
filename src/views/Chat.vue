@@ -41,7 +41,7 @@ function updateSessionTitleList(payload) {
   flex-direction: row;
   flex-wrap: nowrap;
   .chat-sidebar {
-    width: 12em;
+    transition: width 0.3s ease;
   }
   .chat-box {
     flex: 1;
