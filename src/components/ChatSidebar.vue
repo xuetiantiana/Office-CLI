@@ -16,9 +16,11 @@
         :class="{ collapsed: !isExpanded }"
         :style="{ left: !isExpanded ? '5px' : 'calc(100% - 3em)' }"
       >
-        <el-icon>
+        <!-- <el-icon>
           <component :is="isExpanded ? ArrowLeft : ArrowRight" />
-        </el-icon>
+        </el-icon> -->
+        <img src="@/assets/silderBarBtn.svg" alt="" style="width: 1.5em;">
+        <!-- <svg-icon name="silderBarBtn"></svg-icon> -->
       </div>
 
       <!-- 侧边栏标题和Logo -->
@@ -52,7 +54,7 @@
         <p class="chat-list-h2">Chat</p>
         <ul class="session-ul">
           <li
-            v-for="(item, index) in sessions"
+            v-for="(item, index) in reversedSessions"
             :key="item.session_id"
             @click="go(item.session_id, item.session_title || null)"
             :class="{
@@ -60,10 +62,7 @@
               dropdownActive: activeDropdownSessionId === item.session_id,
             }"
             :style="{
-              display:
-                !item.session_title && index < sessions.length - 1
-                  ? 'none'
-                  : '',
+              display: !item.session_title && index != 0 ? 'none' : '',
             }"
           >
             <el-tooltip
@@ -102,11 +101,11 @@
                 <el-dropdown-menu>
                   <el-dropdown-item command="rename">
                     <el-icon><Edit /></el-icon>
-                    <span>重命名</span>
+                    <span>Rename</span>
                   </el-dropdown-item>
                   <el-dropdown-item command="delete" type="danger">
                     <el-icon><Delete /></el-icon>
-                    <span>删除</span>
+                    <span>Delete</span>
                   </el-dropdown-item>
                 </el-dropdown-menu>
               </template>
@@ -230,16 +229,16 @@ function remove(id) {
 
 // 删除前确认
 function confirmRemove(id) {
-  ElMessageBox.confirm("确定要删除这个聊天吗？", "删除确认", {
-    confirmButtonText: "确定",
-    cancelButtonText: "取消",
+  ElMessageBox.confirm("Are you sure you want to delete this chat?", "Delete Confirmation", {
+    confirmButtonText: "Confirm",
+    cancelButtonText: "Cancel",
     type: "warning",
   })
     .then(() => {
       remove(id);
       ElMessage({
         type: "success",
-        message: "删除成功",
+        message: "Delete successful",
       });
     })
     .catch(() => {
@@ -258,14 +257,14 @@ function handleDropdownCommand(command, sessionId, sessionTitle) {
 
 // 重命名会话
 function renameSession(sessionId, currentTitle) {
-  ElMessageBox.prompt("请输入新的会话名称", "重命名会话", {
-    confirmButtonText: "确定",
-    cancelButtonText: "取消",
+  ElMessageBox.prompt("Please enter a new session name", "Rename Session", {
+    confirmButtonText: "Confirm",
+    cancelButtonText: "Cancel",
     inputValue: currentTitle || "New Chat",
-    inputPlaceholder: "会话名称",
+    inputPlaceholder: "Session name",
     inputValidator: (value) => {
       if (!value || value.trim() === "") {
-        return "会话名称不能为空";
+        return "Session name cannot be empty";
       }
       return true;
     },
@@ -280,7 +279,7 @@ function renameSession(sessionId, currentTitle) {
         saveSessions();
         ElMessage({
           type: "success",
-          message: "重命名成功",
+          message: "Rename successful",
         });
       }
     })
@@ -322,7 +321,7 @@ defineExpose({
     .sidebar-toggle {
       transition: all 0.3s ease;
       position: absolute;
-      top: 10px;
+      top: 14px;
       right: 10px;
       width: 30px;
       height: 30px;
@@ -334,9 +333,9 @@ defineExpose({
       cursor: pointer;
       z-index: 10;
 
-      &:hover {
-        background-color: #e0e0e0;
-      }
+      // &:hover {
+      //   background-color: #e0e0e0;
+      // }
     }
 
     .sidebar-header {
@@ -392,17 +391,17 @@ defineExpose({
 
         &:hover {
           background: #ffffff;
-          box-shadow: 0 0.125em 0.375em rgba(0, 0, 0, 0.12);
+          box-shadow: 0 0.125em 0.375em rgba(0, 0, 0, 0.02);
         }
 
         &.dropdownActive {
           background: #ffffff;
-          box-shadow: 0 0.125em 0.375em rgba(0, 0, 0, 0.12);
+          box-shadow: 0 0.125em 0.375em rgba(0, 0, 0, 0.02);
         }
 
         &.active {
           background: #ffffff;
-          box-shadow: 0 0.125em 0.5em rgba(0, 120, 212, 0.15);
+          box-shadow: 0 0.125em 0.5em rgba(0, 0, 0, 0.02);
           font-weight: 600;
 
           &::after {
