@@ -12,6 +12,7 @@
         :chatHistory="chatHistory"
         :chatLoading="chatLoading"
         :sessionId="sessionId"
+        @reloadDocument="reLoadPDF"
       />
       <!-- chat input -->
       <ChatInput

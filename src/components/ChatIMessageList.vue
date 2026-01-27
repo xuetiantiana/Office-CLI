@@ -51,15 +51,39 @@
           </div>
           <div
             style="margin-bottom: 8px; white-space: pre-line"
+            v-if="
+              msg.text.includes('Failed to load the document') ||
+              msg.text.includes('PDF 文件不存在')
+            "
+          >
+            <i
+              >[❌ Failed to load the document. Please manually click
+              <button
+                @click="emit('reloadDocument', props.sessionId)"
+                style="
+                  margin-left: 8px;
+                  padding: 2px 8px;
+                  background: #0078d4;
+                  color: white;
+                  border: none;
+                  border-radius: 4px;
+                  cursor: pointer;
+                  font-size: 14px;
+                "
+              >
+                Reload Document
+              </button>
+              to try again.] ]</i
+            >
+          </div>
+          <div
+            style="margin-bottom: 8px; white-space: pre-line"
+            v-else
             v-html="msg.text"
           ></div>
         </template>
         <template
-          v-if="
-            msg.data &&
-            msg.data.actions &&
-            msg.data.actions.length > 0
-          "
+          v-if="msg.data && msg.data.actions && msg.data.actions.length > 0"
         >
           <div
             v-for="(action, index) in msg.data.actions"
@@ -116,6 +140,8 @@ const props = defineProps({
   chatLoading: Boolean,
   chatHistory: Array,
 });
+
+const emit = defineEmits(["reloadDocument"]);
 
 const scrollbarRef = ref(null);
 const expandedCodeBlocks = ref({});
@@ -175,7 +201,7 @@ function toggleCodeBlock(msgIdx, actionIndex) {
   &.conversation-item-user {
     align-self: flex-end;
     max-width: 80%;
-    .conv-header{
+    .conv-header {
       display: none;
     }
   }
