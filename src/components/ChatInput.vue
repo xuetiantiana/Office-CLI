@@ -73,6 +73,29 @@
         <!-- 按钮 -->
         <div class="btn-box">
           <div class="image-uploader">
+            <el-dropdown trigger="click" placement="top-start">
+              <el-button plain>
+                <el-icon><Plus /></el-icon>
+              </el-button>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item @click="triggerFileUpload">
+                    <el-icon><Upload /></el-icon>
+                    <span style="margin-left: 8px"
+                      >Upload images and files</span
+                    >
+                  </el-dropdown-item>
+                  <!-- <el-dropdown-item>
+                    <el-icon><Cloud /></el-icon>
+                    <span style="margin-left: 8px;">附加云文件</span>
+                  </el-dropdown-item>
+                  <el-dropdown-item>
+                    <el-icon><ChatLineRound /></el-icon>
+                    <span style="margin-left: 8px;">与代理聊天</span>
+                  </el-dropdown-item> -->
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
             <el-upload
               ref="uploadRef"
               :auto-upload="false"
@@ -80,10 +103,9 @@
               accept="image/*, application/msword, application/vnd.openxmlformats-officedocument.wordprocessingml.document, application/vnd.ms-excel, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, text/plain"
               multiple
               @change="onFileChange"
+              style="display: none"
             >
-              <el-button plain
-                ><el-icon><Plus /></el-icon
-              ></el-button>
+              <div style="display: none">上传按钮</div>
             </el-upload>
           </div>
 
@@ -145,7 +167,14 @@
 
 <script setup>
 import { ref, onMounted, onBeforeUnmount } from "vue";
-import { Plus, Microphone, Check, Close, Right } from "@element-plus/icons-vue";
+import {
+  Plus,
+  Microphone,
+  Check,
+  Close,
+  Right,
+  Upload,
+} from "@element-plus/icons-vue";
 import { v4 as uuidv4 } from "uuid";
 
 const props = defineProps({
@@ -270,6 +299,15 @@ const sendMessage = () => {
 
 const StopBtnClick = () => {
   emit("StopBtnClick");
+};
+
+const triggerFileUpload = () => {
+  // 触发隐藏的上传按钮
+  const uploadElement =
+    uploadRef.value?.$el?.querySelector('input[type="file"]');
+  if (uploadElement) {
+    uploadElement.click();
+  }
 };
 
 defineExpose({
