@@ -223,7 +223,7 @@ function toggleCodeBlock(msgIdx, actionIndex) {
     margin-left: 0;
 
     &.user-content {
-      background: #f8f9fa;
+      background: #f5f5f5;
       padding: 12px;
       border-radius: 6px;
     }

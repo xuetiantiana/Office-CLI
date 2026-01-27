@@ -51,7 +51,7 @@
             </li>
           </ul>
         </div>
-        <p class="chat-list-h2">Chat</p>
+        <p class="chat-list-h2">Chats</p>
         <ul class="session-ul">
           <li
             v-for="(item, index) in reversedSessions"
@@ -297,13 +297,13 @@ defineExpose({
 
 <style lang="scss" scoped>
 .sidebar-content {
+  font-size: .875rem;
   background: #f5f5f5;
   padding: 0;
   height: 100vh;
   overflow: hidden;
   box-sizing: border-box;
-  font-size: 1rem;
-  color: #0d0d0d;
+  color: #333;
   transition: width 0.3s ease;
   position: relative;
   z-index: 1;
@@ -466,8 +466,8 @@ defineExpose({
       overflow: hidden;
 
       .chat-list-h2 {
-        font-size: 1.1em;
-        padding: 0.4em 3.1em;
+        font-size: .9em;
+        padding: 0.5em 3.5em;
         opacity: 0.9;
         font-weight: bold;
         margin-top: 0.2em;

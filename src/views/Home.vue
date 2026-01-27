@@ -6,21 +6,36 @@
         display: flex;
         flex-direction: row;
         justify-content: center;
-        align-items: center;
         flex: 1;
         background-color: #fafafa;
       "
     >
       <div
-        style="width: calc(48vw - 150px); min-width: 800px; padding-bottom: 5em"
+        style="
+          width: calc((100vw - 300px) * 0.75);
+          min-width: 800px;
+          max-width: 1000px;
+          padding-bottom: 2em;
+        "
       >
-        <h2>Welcome! What can I help you with today?</h2>
-        <ChatInput
-          ref="chatInputRef"
-          :chatHistory="[]"
-          class="chat-box"
-          @sendMessage="sendMessage"
-        />
+        <div
+          style="
+            min-height: calc(45vh - 7em);
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+          "
+        >
+          <h2>Welcome! What can I help you with today?</h2>
+        </div>
+        <div style="">
+          <ChatInput
+            ref="chatInputRef"
+            :chatHistory="[]"
+            class="chat-box"
+            @sendMessage="sendMessage"
+          />
+        </div>
       </div>
     </div>
   </div>
@@ -122,10 +137,11 @@ function save() {
   }
 
   h2 {
-    padding: 2em 1em 2em;
+    padding: 1em;
     text-align: center;
     font-weight: 600;
     font-size: 2em;
+    letter-spacing: 1px;
   }
 }
 </style>

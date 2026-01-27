@@ -105,7 +105,7 @@ function loadSession(sessionId) {
     pdfBlobUrl.value = pdfBlobMap.get(sessionId);
     return;
   } else {
-    // reLoadPDF(sessionId);
+    reLoadPDF(sessionId);
   }
 }
 // 页面首次进入
@@ -313,7 +313,16 @@ async function reLoadPDF(sessionId) {
     let url = refreshPDF(sessionId);
     const res = await fetch(url);
 
-    if (!res.ok) throw new Error("PDF 请求失败");
+    if (!res.ok) {
+      const error = new Error();
+      error.status = res.status;
+      if (res.status === 404) {
+        error.message = "PDF 文件不存在 (404)";
+      } else {
+        error.message = `PDF 请求失败 (${res.status})`;
+      }
+      throw error;
+    }
     console.log("sessionId", sessionId, session_id.value);
     if (sessionId !== session_id.value) {
       return;
@@ -334,10 +343,17 @@ async function reLoadPDF(sessionId) {
       pdfBlobMap.delete(oldSessionId);
     }
   } catch (e) {
-    chatHistory.value.push({
-      role: "model",
-      text: "<i>[❌ Failed to load the document. Please manually click <b>‘Reload Document’</b> to try again.]<i>",
-    });
+    if (e.status === 404) {
+      // chatHistory.value.push({
+      //   role: "model",
+      //   text: "<i>[❌ PDF 文件不存在 (404)。请检查文件是否已被删除或移动。]<i>",
+      // });
+    } else {
+      chatHistory.value.push({
+        role: "model",
+        text: "<i>[❌ Failed to load the document. Please manually click <b>‘Reload Document’</b> to try again.]<i>",
+      });
+    }
     console.error(e);
   } finally {
     loadingPdf.value = false;

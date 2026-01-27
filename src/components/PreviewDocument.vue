@@ -1,6 +1,6 @@
 <template>
   <div class="preview-panel">
-    <el-button
+    <!-- <el-button
         style="position: absolute; top: 1em; right: 1em;opacity: 0;"
         type="primary"
         size="small"
@@ -8,7 +8,7 @@
         :disabled="loadingPdf"
         @click="handleReloadPDF"
         >Reload Document</el-button
-      >
+      > -->
     <div class="preview-content" id="previewContent">
       <div
         v-loading="loadingPdf"

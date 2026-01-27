@@ -90,13 +90,13 @@ li {
 }
 
 ::-webkit-scrollbar-track-piece {
-    background-color: rgba(0, 0, 0, 0.2);
+    background-color: rgba(0, 0, 0, 0.01);
     border-radius: 6px;
 }
 
 ::-webkit-scrollbar-thumb:vertical {
     height: 5px;
-    background-color: rgba(125, 125, 125, 0.7);
+    background-color: rgba(125, 125, 125, 0.2);
     border-radius: 6px;
 }
 
@@ -110,7 +110,7 @@ html,
 body {
     width: 100%;
     height: 100%;
-    font-size: 14px;
+    font-size: 16px;
 }
 
 body {
@@ -127,7 +127,7 @@ body {
 
 
 
-@media (max-width: 1640px) {
+/* @media (max-width: 1640px) {
 
     html,
     body {
@@ -142,7 +142,7 @@ body {
     body {
         font-size: 12px;
     }
-}
+} */
 
 
 

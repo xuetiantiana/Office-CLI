@@ -3,23 +3,6 @@
     <!-- chat input -->
     <div class="chat-input-container" style="position: relative">
       <div class="content">
-        <div
-          v-if="chatHistory.length == 0 && isInputFocused"
-          class="example-container"
-        >
-          <p>👉 Examples:</p>
-          <ul class="example-ul" style="">
-            <li
-              v-for="item in newCase"
-              :key="item.query"
-              :data-query="item.query"
-              @click="sendExample(item)"
-            >
-              <span class="query-text">{{ item.text }}</span>
-            </li>
-          </ul>
-        </div>
-
         <!-- 文件列表 -->
         <div class="file-list" v-if="selectFilesObjsArray.length > 0">
           <div
@@ -64,7 +47,7 @@
           </div>
         </div>
 
-        <div style="min-height: 4em; padding: 0.5em 0">
+        <div style="min-height: 4.3em; padding: 1em 0.2em 0.3em">
           <div v-if="!isListening" class="input-wrapper">
             <el-input
               v-model="textareaValue"
@@ -82,8 +65,6 @@
               @paste="onPaste"
               @dragover.prevent
               @drop="onDrop"
-              @focus="isInputFocused = true"
-              @blur="isInputFocused = false"
             />
           </div>
           <div v-else class="listening-result-div">{{ fullText }} ...</div>
@@ -142,6 +123,21 @@
             </el-button>
           </div>
         </div>
+      </div>
+
+      <div v-if="chatHistory.length == 0" class="example-container">
+        <p>✨ Quick starts:</p>
+        <!-- <p>👉 Try these:</p>  -->
+        <ul class="example-ul" style="">
+          <li
+            v-for="item in newCase"
+            :key="item.query"
+            :data-query="item.query"
+            @click.stop="sendExample(item)"
+          >
+            <span class="query-text">{{ item.text }}</span>
+          </li>
+        </ul>
       </div>
     </div>
   </div>
@@ -297,11 +293,14 @@ onMounted(() => {
   }
 
   recognition = new SpeechRecognition();
-  recognition.lang = props.lang || "en-US"; // 'en-US'   // 英文
+  // recognition.lang = props.lang || "en-US"; // 'en-US'   // 英文
+  // recognition.lang = "en-US";   // 英语
+  // recognition.lang = "zh-CN"; // 中文普通话
+  // recognition.lang = "ja-JP"; // 日语
 
   console.log("recognition.lang====", recognition.lang);
-  recognition.interimResults = true;
-  recognition.continuous = true;
+  recognition.interimResults = true; // 实时返回中间结果
+  recognition.continuous = true; // 连续识别
 
   recognition.onstart = () => {
     console.log("recognition start");
@@ -309,11 +308,10 @@ onMounted(() => {
     finalText.value = "";
     interimText.value = "";
     fullText.value = "";
-
-    emit("setEmotionStatus", "cursor");
   };
 
   recognition.onresult = (event) => {
+    console.log("onresult event====", event);
     let interim = "";
     for (let i = event.resultIndex; i < event.results.length; i++) {
       const transcript = event.results[i][0].transcript;
@@ -324,13 +322,16 @@ onMounted(() => {
       }
     }
     interimText.value = interim;
+    console.log("interimText.value====", interimText.value);
     // 拼接成一段
     fullText.value = finalText.value + interimText.value;
+    console.log("finalText.value====", finalText.value);
   };
 
   recognition.onend = () => {
     console.log("recognition end");
     isListening.value = false;
+    textareaValue.value = finalText.value;
   };
 
   recognition.onerror = (e) => {
@@ -540,7 +541,7 @@ async function loadDemoConversation(query) {
     background: #fff;
     border: 1px solid rgba(13, 13, 13, 0.1);
     box-shadow: 0px 0px 10px 0px rgba(0, 0, 0, 0.1);
-    padding: 1em;
+    padding: 0 1em 0.8em;
     border-radius: 20px;
     .listening-result-div {
       padding: 0 1em;
@@ -553,18 +554,21 @@ async function loadDemoConversation(query) {
       gap: 12px;
       align-items: flex-end;
 
-      :deep(.el-textarea__inner) {
-        box-shadow: none;
-        min-height: 2em;
-        padding: 0 0em;
-        border: 0;
+      :deep(.el-textarea) {
         font-size: 1em;
-        line-height: 1.5;
-        font-family: var(--font-family);
-        background-color: #fff;
-        color: var(--text-primary);
-        resize: none;
-        transition: all var(--transition-speed);
+        .el-textarea__inner {
+          box-shadow: none;
+          min-height: 2em;
+          padding: 0 0em;
+          border: 0;
+
+          line-height: 1.5;
+          font-family: var(--font-family);
+          background-color: #fff;
+          color: var(--text-primary);
+          resize: none;
+          transition: all var(--transition-speed);
+        }
       }
 
       .chat-input:focus {
@@ -586,8 +590,9 @@ async function loadDemoConversation(query) {
       flex-direction: row;
       justify-content: space-between;
       button {
-        width: 2.6em;
-        height: 2.6em;
+        width: 2.4em;
+        height: 2.4em;
+        padding: 0;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -595,7 +600,7 @@ async function loadDemoConversation(query) {
         border: 1px solid transparent;
         border-radius: 3px;
         color: #333;
-        font-size: 1.1em;
+        font-size: 1em;
         .el-icon,
         .fas {
           font-size: 1.5em;
@@ -650,6 +655,7 @@ async function loadDemoConversation(query) {
     display: flex;
     flex-wrap: wrap;
     gap: 12px;
+    padding-top: 1em;
     .file-item {
       width: 80px;
       height: 80px;
@@ -669,7 +675,7 @@ async function loadDemoConversation(query) {
       color: white;
       border: none;
       cursor: pointer;
-      font-size: 14px;
+      // font-size: 14px;
       line-height: 1;
       padding: 0;
       display: flex;
@@ -689,7 +695,8 @@ async function loadDemoConversation(query) {
       display: flex;
       align-items: center;
       justify-content: center;
-      border-radius: 4px;
+      border-radius: 12px;
+      overflow: hidden;
       background-color: #f5f5f5;
     }
 
@@ -747,16 +754,15 @@ async function loadDemoConversation(query) {
   }
 
   .example-container {
-    background: #fff;
+    // background: #fff;
     padding: 0;
     margin: 0;
     z-index: 3;
-    position: absolute;
-    left: 0;
-    right: 0;
+    // position: absolute;
+    // left: 0;
+    // right: 0;
     top: calc(100% - 12px);
     padding: 10px 24px;
-    margin: 0 24px;
     border-radius: 20px;
     & > p {
       font-size: 1em;
@@ -764,18 +770,28 @@ async function loadDemoConversation(query) {
       color: #333;
       margin-bottom: 10px;
     }
+    ul {
+      display: flex;
+      flex-direction: row;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
     ul li {
+      border: 1px solid #f1f1f1;
+      background: #fff;
       padding: 10px 14px;
-      border-radius: 4px;
+      border-radius: 10px;
       cursor: pointer;
       transition: all 0.2s ease;
-      margin: 5px 0;
-
+      // margin: 5px 0;
+      width: calc(50% - 5px);
       &:hover {
-        border-left-color: var(--primary-color);
-        border-left: 3px solid var(--primary-color);
+        // border-left-color: var(--primary-color);
+        // border-left: 3px solid var(--primary-color);
         transform: translateX(2px);
-        background: #f0f0f0;
+        // background: #f0f0f0;
+        transform: scale(1.02);
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
       }
     }
   }
