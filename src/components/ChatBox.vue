@@ -4,7 +4,7 @@
     <div class="chat-panel">
       <div class="chat-header">
         <div class="header-left">
-          <h1 style="min-height: 2em;" class="app-title">{{sessionTitle}}</h1>
+          <h1 style="min-height: 2em" class="app-title">{{ sessionTitle }}</h1>
         </div>
       </div>
       <!-- chat message list -->
@@ -69,7 +69,6 @@ const pdfUrl = ref("");
 const pdfBlobUrl = ref("");
 
 const chatLoading = ref(false);
-
 
 function loadSession(sessionId) {
   chatLoading.value = false;
@@ -136,6 +135,9 @@ watch(
 );
 
 const sendMessage = async (text) => {
+  if(chatLoading.value) {
+    return;
+  }
   if (!text || text.trim().length == 0) {
     return;
   }
@@ -242,6 +244,9 @@ const callChatStreamApi = async () => {
 
       onError: (err) => {
         // assistantMsg.streaming = false;
+        if (sessionId !== session_id.value) {
+          return;
+        }
         assistantMsg.text +=
           "\n<i>[❌ An unexpected error occurred during the chat process. Please try again.]<i>";
         console.error("❌ error:", err);
@@ -267,6 +272,7 @@ const setChatName = async () => {
       },
     ],
   };
+  const sessionId = session_id.value;
   await chatStream(
     { payload: payload },
     {
@@ -275,11 +281,17 @@ const setChatName = async () => {
       },
 
       onDelta: (delta) => {
+        if (sessionId !== session_id.value) {
+          return;
+        }
         console.log("onDelta", delta);
         title += delta; // 🔥 实时流式显示
       },
 
       onEnd: (final) => {
+        if (sessionId !== session_id.value) {
+          return;
+        }
         // assistantMsg.streaming = false;
         console.log("🏁 完成:", final, title);
 
@@ -314,6 +326,10 @@ async function reLoadPDF(sessionId) {
     let url = refreshPDF(sessionId);
     const res = await fetch(url);
 
+    if (sessionId !== session_id.value) {
+      return;
+    }
+
     if (!res.ok) {
       const error = new Error();
       error.status = res.status;
@@ -344,6 +360,9 @@ async function reLoadPDF(sessionId) {
       pdfBlobMap.delete(oldSessionId);
     }
   } catch (e) {
+    if (sessionId !== session_id.value) {
+      return;
+    }
     if (e.status === 404) {
       // chatHistory.value.push({
       //   role: "model",
@@ -441,7 +460,7 @@ function parseChatJson(text) {
       align-items: center;
       justify-content: space-between;
       padding: 1em;
-      border-bottom: 1px solid #eee;   
+      border-bottom: 1px solid #eee;
       background-color: var(--bg-primary);
       .header-left {
         display: flex;
@@ -639,110 +658,6 @@ function parseChatJson(text) {
     }
   }
 
-  /* ==================== Input Area ==================== */
-  .chat-input-container {
-    padding: 16px 24px 24px;
-
-    .content {
-      background: #fff;
-      border: 1px solid rgba(13, 13, 13, 0.1);
-      box-shadow: 0px 0px 10px 0px rgba(0, 0, 0, 0.1);
-      padding: 1em;
-      border-radius: 20px;
-      .input-wrapper {
-        display: flex;
-        gap: 12px;
-        align-items: flex-end;
-        margin-bottom: 12px;
-
-        .chat-input {
-          flex: 1;
-          min-height: 2em;
-          max-height: 120px;
-          padding: 0 1em;
-          border: 0;
-          font-size: 1em;
-          font-family: var(--font-family);
-          background-color: #fff;
-          color: var(--text-primary);
-          resize: none;
-          transition: all var(--transition-speed);
-        }
-
-        .chat-input:focus {
-          outline: none;
-          border-color: var(--primary-color);
-          background-color: #fff;
-        }
-
-        .chat-input:disabled {
-          cursor: not-allowed;
-          opacity: 0.6;
-          background-color: var(--bg-secondary);
-          color: var(--text-tertiary);
-        }
-      }
-
-      .btn-box {
-        display: flex;
-        flex-direction: row;
-        justify-content: space-between;
-        button {
-          width: 2.6em;
-          height: 2.6em;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background-color: transparent;
-          border: 1px solid transparent;
-          border-radius: 3px;
-          color: #333;
-          font-size: 1.1em;
-          .el-icon,
-          .fas {
-            font-size: 1.5em;
-          }
-        }
-        .right {
-          display: flex;
-          gap: 4px;
-          .send-btn {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background-color: var(--primary-color);
-            border: 1px solid var(--primary-color);
-            border-radius: 3px;
-            color: white;
-            cursor: pointer;
-            transition: all var(--transition-speed);
-            flex-shrink: 0;
-            &:hover {
-              background-color: var(--primary-hover);
-              border-color: var(--primary-hover);
-            }
-
-            &:disabled {
-              cursor: not-allowed;
-              opacity: 0.5;
-              background-color: var(--text-tertiary);
-              border-color: var(--text-tertiary);
-            }
-
-            &:disabled:hover {
-              background-color: var(--text-tertiary);
-              border-color: var(--text-tertiary);
-            }
-
-            &:active {
-              transform: none;
-            }
-          }
-        }
-      }
-    }
-  }
-
   /* ==================== Animations ==================== */
   @keyframes fadeIn {
     from {
@@ -819,8 +734,6 @@ function parseChatJson(text) {
       padding: 12px 16px 16px;
     }
   }
-
-  
 }
 </style>
 
@@ -934,8 +847,6 @@ function parseChatJson(text) {
     cursor: pointer;
   }
 }
-
-
 
 .loading-container {
   display: flex;

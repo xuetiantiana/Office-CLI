@@ -211,9 +211,9 @@ function go(id, title) {
   // router.push(`/chat/${id}`);
   router.push({
     path: `/chat/${id}`,
-    query: {
-      title,
-    },
+    // query: {
+    //   title,
+    // },
   });
 }
 

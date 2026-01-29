@@ -73,7 +73,7 @@
         <!-- 按钮 -->
         <div class="btn-box">
           <div class="image-uploader">
-            <el-dropdown trigger="click" placement="top-start">
+            <el-dropdown trigger="click" placement="bottom-start">
               <el-button plain>
                 <el-icon><Plus /></el-icon>
               </el-button>
@@ -288,6 +288,9 @@ function removeImage(index) {
 
 const emit = defineEmits(["sendMessage"]);
 const sendMessage = () => {
+  if (props.chatLoading) {
+    return;
+  }
   if (textareaValue.value.trim() === "") return;
   const message = textareaValue.value.trim();
   textareaValue.value = "";
@@ -573,7 +576,7 @@ async function loadDemoConversation(query) {
 <style lang="scss" scoped>
 /* ==================== Input Area ==================== */
 .chat-input-container {
-  padding: 16px 24px 24px;
+  padding: 16px 24px 50px;
 
   .content {
     background: #fff;
