@@ -42,15 +42,17 @@
 </template>
 
 <script setup>
-import { ref, watch } from "vue";
+import { ref, watch, onMounted } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import ChatSidebar from "@/components/ChatSidebar.vue";
 import ChatInput from "../components/ChatInput.vue";
 import { useFileStore } from "@/stores/fileStore.js";
+import { useSessionStore } from "@/stores/sessionStore.js";
 import { v4 as uuidv4 } from "uuid";
 
 const router = useRouter();
 const route = useRoute();
+const sessionStore = useSessionStore();
 
 function generateId() {
   // return crypto.randomUUID();
@@ -92,34 +94,23 @@ const sendMessage = async (text) => {
 
 // ---- 保存 session 到 localStorage ----
 function save() {
-  const chatHistoryList = JSON.parse(
-    localStorage.getItem("session_id_chat_history_list") || "[]"
-  );
-  const idx = chatHistoryList.findIndex(
-    (s) => s.session_id === session_id.value
-  );
+  const session = sessionStore.getSessionById(session_id.value);
 
-  if (idx !== -1) {
-    chatHistoryList[idx].session_title = sessionTitle.value;
-    chatHistoryList[idx].chatHistory = chatHistory.value;
-    localStorage.setItem(
-      "session_id_chat_history_list",
-      JSON.stringify(chatHistoryList)
-    );
+  if (session) {
+    sessionStore.updateChatHistoryById(session_id.value, chatHistory.value);
   } else {
     // 首条消息放入 session
-
-    chatHistoryList.push({
+    sessionStore.addSession({
       session_id: session_id.value,
       chatHistory: chatHistory.value,
     });
-
-    localStorage.setItem(
-      "session_id_chat_history_list",
-      JSON.stringify(chatHistoryList)
-    );
   }
 }
+
+onMounted(() => {
+  // 加载 sessions 到 store
+  sessionStore.loadSessions();
+});
 </script>
 
 <style lang="scss" scoped>

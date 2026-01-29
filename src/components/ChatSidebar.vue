@@ -141,10 +141,12 @@ import {
   MoreFilled,
 } from "@element-plus/icons-vue"; // Element Plus 图标
 import { useSidebarStore } from "@/stores/sidebarStore.js";
+import { useSessionStore } from "@/stores/sessionStore.js";
 
-const route = useRoute(); // 必须！
+const route = useRoute();
 const router = useRouter();
-const sessions = ref([]);
+const sessionStore = useSessionStore();
+const sessions = computed(() => sessionStore.sessions);
 
 // 侧边栏状态管理
 const sidebarStore = useSidebarStore();
@@ -190,17 +192,7 @@ function toggleSidebar() {
 const reversedSessions = computed(() => sessions.value.slice().reverse());
 
 function load() {
-  sessions.value = JSON.parse(
-    localStorage.getItem("session_id_chat_history_list") || "[]"
-  );
-  console.log("111111", sessions.value);
-}
-
-function saveSessions() {
-  localStorage.setItem(
-    "session_id_chat_history_list",
-    JSON.stringify(sessions.value)
-  );
+  sessionStore.loadSessions();
 }
 
 function create() {
@@ -219,8 +211,7 @@ function go(id, title) {
 
 // 删除某个聊天
 function remove(id) {
-  sessions.value = sessions.value.filter((item) => item.session_id !== id);
-  saveSessions();
+  sessionStore.removeSessionById(id);
   // 如果当前页面正在查看被删除的聊天，跳回首页
   if (route.params.sessionId === id) {
     router.push("/");
@@ -271,17 +262,11 @@ function renameSession(sessionId, currentTitle) {
   })
     .then(({ value }) => {
       // 更新会话标题
-      const sessionIndex = sessions.value.findIndex(
-        (item) => item.session_id === sessionId
-      );
-      if (sessionIndex !== -1) {
-        sessions.value[sessionIndex].session_title = value.trim();
-        saveSessions();
-        ElMessage({
-          type: "success",
-          message: "Rename successful",
-        });
-      }
+      sessionStore.updateSessionTitleById(sessionId, value.trim());
+      ElMessage({
+        type: "success",
+        message: "Rename successful",
+      });
     })
     .catch(() => {
       // 用户取消重命名

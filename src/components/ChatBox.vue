@@ -54,6 +54,7 @@ import {
 import { ChatStop } from "@/service/api.ts";
 import { v4 as uuidv4 } from "uuid";
 import { useFileStore } from "@/stores/fileStore.js";
+import { useSessionStore } from "@/stores/sessionStore.js";
 
 const props = defineProps({
   sessionId: String,
@@ -61,6 +62,7 @@ const props = defineProps({
 const router = useRouter();
 const route = useRoute();
 const chatInputRef = ref(null);
+const sessionStore = useSessionStore();
 
 const session_id = ref(null);
 const sessionTitle = ref(null);
@@ -79,10 +81,8 @@ function loadSession(sessionId) {
   if (!sessionId) {
     return;
   }
-  const chatHistoryList = JSON.parse(
-    localStorage.getItem("session_id_chat_history_list") || "[]"
-  );
-  const session = chatHistoryList.find((s) => s.session_id === sessionId);
+  sessionStore.loadSessions()
+  const session = sessionStore.getSessionById(sessionId);
 
   if (session) {
     sessionTitle.value = session.session_title;
@@ -133,6 +133,20 @@ watch(
     loadSession(newId);
   }
 );
+
+// 监听 sessionStore 中当前 session 的 title 变化
+watch(
+  () => sessionStore.sessions,
+  (newSessions) => {
+    const currentSession = newSessions.find(s => s.session_id === props.sessionId);
+    if (currentSession && currentSession.session_title) {
+      sessionTitle.value = currentSession.session_title;
+    }
+  },
+  { deep: true }
+);
+
+
 
 const sendMessage = async (text) => {
   if(chatLoading.value) {
@@ -382,32 +396,16 @@ async function reLoadPDF(sessionId) {
 
 // ---- 保存 session 到 localStorage ----
 function save() {
-  const chatHistoryList = JSON.parse(
-    localStorage.getItem("session_id_chat_history_list") || "[]"
-  );
-  const idx = chatHistoryList.findIndex(
-    (s) => s.session_id === session_id.value
-  );
+  const session = sessionStore.getSessionById(session_id.value);
 
-  if (idx !== -1) {
-    chatHistoryList[idx].session_title = sessionTitle.value;
-    chatHistoryList[idx].chatHistory = chatHistory.value;
-    localStorage.setItem(
-      "session_id_chat_history_list",
-      JSON.stringify(chatHistoryList)
-    );
+  if (session) {
+    sessionStore.updateSessionById(session_id.value, sessionTitle.value, chatHistory.value);
   } else {
     // 首条消息放入 session
-
-    chatHistoryList.push({
+    sessionStore.addSession({
       session_id: session_id.value,
       chatHistory: chatHistory.value,
     });
-
-    localStorage.setItem(
-      "session_id_chat_history_list",
-      JSON.stringify(chatHistoryList)
-    );
   }
 }
 
