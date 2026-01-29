@@ -4,8 +4,26 @@
       v-for="(msg, idx) in chatHistory"
       :key="idx"
       class="conversation-item"
-      :class="msg.role === 'user' ? 'conversation-item-user' : ''"
+      :class="
+        msg.role === 'user'
+          ? 'conversation-item-user'
+          : 'conversation-item-model'
+      "
+      :ref="(el) => setItemRef(el, idx)"
     >
+      <el-tooltip
+        :content="collapsedMessages[idx] ? 'Expand' : 'Collapse'"
+        placement="bottom"
+      >
+        <button
+          v-if="contentHeights[idx] > COLLAPSE_HEIGHT_THRESHOLD"
+          @click="toggleCollapse(idx)"
+          class="collapse-button-top"
+        >
+          <el-icon v-if="collapsedMessages[idx]"><ArrowDownBold /></el-icon>
+          <el-icon v-else><ArrowUpBold /></el-icon>
+        </button>
+      </el-tooltip>
       <div v-if="msg.role === 'user'" class="conv-header">
         <div class="conv-avatar user">U</div>
         <span class="conv-role">User</span>
@@ -17,7 +35,6 @@
           chatHistory[idx - 1].role != 'model'
         "
         class="conv-header assistant-header"
-        style="margin-bottom: 12px"
       >
         <img
           src="@/assets/OfficeCLI.jpg"
@@ -37,7 +54,10 @@
       </div>
       <div
         class="conv-content"
-        :class="msg.role == 'user' ? 'user-content' : ''"
+        :class="[
+          msg.role == 'user' ? 'user-content' : '',
+          collapsedMessages[idx] ? 'collapsed' : '',
+        ]"
       >
         <template v-if="msg.role === 'user'">
           <div v-html="msg.text" style="white-space: pre-line"></div>
@@ -132,8 +152,9 @@
 </template>
 
 <script setup>
-import { ref, nextTick, watch } from "vue";
+import { ref, nextTick, watch, onBeforeUnmount } from "vue";
 import { mapIcon, highlightJavaScript } from "@/utils/common.js";
+import { ArrowDownBold, ArrowUpBold } from "@element-plus/icons-vue";
 
 const props = defineProps({
   sessionId: String,
@@ -144,11 +165,102 @@ const props = defineProps({
 const emit = defineEmits(["reloadDocument"]);
 
 const scrollbarRef = ref(null);
+
+// 折叠相关状态管理
 const expandedCodeBlocks = ref({});
+const collapsedMessages = ref({});
+const contentHeights = ref({});
+const itemRefs = ref({});
+const prevChatHistoryLength = ref(0);
+const isInitialLoad = ref(true);
+
+// 折叠高度阈值（像素）
+const COLLAPSE_HEIGHT_THRESHOLD = 148;
+
+// 存储 ResizeObserver 实例
+const resizeObservers = ref({});
+
+const setItemRef = (el, index) => {
+  if (el) {
+    itemRefs.value[index] = el;
+    const content = el.querySelector(".conv-content");
+    if (content && !contentHeights.value[index]) {
+      console.log("content 元素存在");
+      // 初始计算高度
+      contentHeights.value[index] = content.scrollHeight;
+
+      // 使用 ResizeObserver 监听高度变化
+      if (!resizeObservers.value[index]) {
+        console.log("创建 ResizeObserver 实例");
+        const observer = new ResizeObserver((entries) => {
+          for (const entry of entries) {
+            const newHeight = entry.target.scrollHeight;
+            if (contentHeights.value[index] !== newHeight) {
+              console.log(
+                `高度变化：${contentHeights.value[index]} -> ${newHeight}`
+              );
+              contentHeights.value[index] = newHeight;
+            }
+          }
+        });
+        observer.observe(content);
+        resizeObservers.value[index] = observer;
+      }
+    }
+  }
+};
+
+const toggleCollapse = (index) => {
+  collapsedMessages.value[index] = !collapsedMessages.value[index];
+};
+
+// 监听sessionId变化，切换页面时清空所有状态
+watch(
+  () => props.sessionId,
+  () => {
+    // 清理所有 ResizeObserver
+    Object.values(resizeObservers.value).forEach((observer) => {
+      observer.disconnect();
+    });
+    resizeObservers.value = {};
+
+    expandedCodeBlocks.value = {};
+    collapsedMessages.value = {};
+    contentHeights.value = {};
+    itemRefs.value = {};
+    prevChatHistoryLength.value = 0;
+    isInitialLoad.value = true;
+  }
+);
+
+// 组件卸载时清理所有观察者
+onBeforeUnmount(() => {
+  Object.values(resizeObservers.value).forEach((observer) => {
+    observer.disconnect();
+  });
+  resizeObservers.value = {};
+});
+
+// 监听chatLoading变化，当流式请求结束时自动收起最后一条model消息
+// watch(
+//   () => props.chatLoading,
+//   (newLoading, oldLoading) => {
+//     if (oldLoading === true && newLoading === false) {
+//       // 流式请求结束，找到最后一条model消息并收起
+//       const lastModelIndex = props.chatHistory.map((msg, idx) => ({ msg, idx }))
+//         .filter(item => item.msg.role === 'model')
+//         .pop();
+
+//       if (lastModelIndex && contentHeights.value[lastModelIndex.idx] > COLLAPSE_HEIGHT_THRESHOLD) {
+//         collapsedMessages.value[lastModelIndex.idx] = true;
+//       }
+//     }
+//   }
+// );
 
 watch(
   () => props.chatHistory,
-  async () => {
+  async (newHistory, oldHistory) => {
     await nextTick();
 
     const sb = scrollbarRef.value;
@@ -175,6 +287,36 @@ watch(
     if (el && typeof el.scrollTop !== "undefined") {
       el.scrollTop = el.scrollHeight;
     }
+
+    // 处理折叠状态
+    if (isInitialLoad.value) {
+      // 初始加载时，所有消息都折叠，但前提是高度大于阈值
+      newHistory.forEach((msg, idx) => {
+        if (
+          !collapsedMessages.value[idx] &&
+          contentHeights.value[idx] > COLLAPSE_HEIGHT_THRESHOLD
+        ) {
+          collapsedMessages.value[idx] = true;
+        }
+      });
+      isInitialLoad.value = false;
+    } else if (newHistory.length > prevChatHistoryLength.value) {
+      // 新增消息时，根据role设置默认状态
+      const newMessages = newHistory.slice(prevChatHistoryLength.value);
+      newMessages.forEach((msg, idx) => {
+        const actualIdx = prevChatHistoryLength.value + idx;
+        if (msg.role === "user") {
+          // user消息默认折叠，但前提是高度大于阈值
+          if (contentHeights.value[actualIdx] > COLLAPSE_HEIGHT_THRESHOLD) {
+            collapsedMessages.value[actualIdx] = true;
+          }
+        } else if (msg.role === "model") {
+          // model消息默认打开
+          collapsedMessages.value[actualIdx] = false;
+        }
+      });
+    }
+    prevChatHistoryLength.value = newHistory.length;
   },
   { deep: true }
 );
@@ -186,6 +328,32 @@ function toggleCodeBlock(msgIdx, actionIndex) {
 </script>
 
 <style scoped lang="scss">
+/* ==================== 折叠按钮样式 ==================== */
+.conversation-item-model {
+  .collapse-button-top {
+    right: auto;
+    left: 13em;
+    top: 0.3em;
+  }
+}
+.collapse-button-top {
+  position: absolute;
+  top: 0;
+  right: 0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #666;
+  font-size: 14px;
+  padding: 4px;
+  border-radius: 4px;
+  z-index: 10;
+
+  &:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+  }
+}
+
 .chat-messages {
   flex: 1;
   overflow-y: auto;
@@ -196,6 +364,7 @@ function toggleCodeBlock(msgIdx, actionIndex) {
 }
 
 .conversation-item {
+  position: relative;
   margin-bottom: 16px;
   animation: fadeIn 0.3s ease-in;
   &.conversation-item-user {
@@ -210,7 +379,6 @@ function toggleCodeBlock(msgIdx, actionIndex) {
     display: flex;
     align-items: center;
     gap: 8px;
-    margin-bottom: 8px;
   }
 
   .conv-avatar {
@@ -242,7 +410,7 @@ function toggleCodeBlock(msgIdx, actionIndex) {
 
   .conv-content {
     background: transparent;
-    padding: 0 0 0 2em;
+    padding: 12px 0 12px 2em;
     border: none;
     line-height: 1.6;
     font-size: 1em;
@@ -251,7 +419,18 @@ function toggleCodeBlock(msgIdx, actionIndex) {
     &.user-content {
       background: #f5f5f5;
       padding: 12px;
-      border-radius: 6px;
+      border-radius: 10px;
+      padding-right: 30px;
+    }
+
+    &.collapsed {
+      & > div {
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 5;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
     }
 
     pre {
