@@ -16,7 +16,7 @@
         placement="bottom"
       >
         <button
-          v-if="contentHeights[idx] > COLLAPSE_HEIGHT_THRESHOLD"
+          v-if="contentHeights[idx] > COLLAPSE_HEIGHT_THRESHOLD || collapsedMessages[idx]"
           @click="toggleCollapse(idx)"
           class="collapse-button-top"
         >
@@ -175,7 +175,7 @@ const prevChatHistoryLength = ref(0);
 const isInitialLoad = ref(true);
 
 // 折叠高度阈值（像素）
-const COLLAPSE_HEIGHT_THRESHOLD = 148;
+const COLLAPSE_HEIGHT_THRESHOLD = 152;
 
 // 存储 ResizeObserver 实例
 const resizeObservers = ref({});
