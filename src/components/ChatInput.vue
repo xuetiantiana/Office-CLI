@@ -110,9 +110,9 @@
           </div>
 
           <div v-if="!isListening" class="right">
-            <el-button class="audio-btn" @click="startRecognition">
+            <!-- <el-button class="audio-btn" @click="startRecognition">
               <el-icon><Microphone /></el-icon>
-            </el-button>
+            </el-button> -->
 
             <template v-if="!chatLoading">
               <el-button
@@ -273,7 +273,6 @@ const sendExample = (item) => {
   if (props.chatLoading) {
     return;
   }
-  props.chatLoading = true;
   //   loadDemoConversation(item.query);
   console.log(`${item.text} \n ${queryDefaultInfo[item.query]}`);
 
